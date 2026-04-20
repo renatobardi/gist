@@ -102,7 +102,10 @@ async fn list_tokens_returns_created_tokens() {
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["name"], "ci-token");
     assert!(items[0]["token_id"].is_string());
-    assert!(items[0].get("token").is_none(), "raw token must not be returned in list");
+    assert!(
+        items[0].get("token").is_none(),
+        "raw token must not be returned in list"
+    );
 }
 
 // DELETE /api/tokens/{id} revokes the token → 204
@@ -117,7 +120,10 @@ async fn delete_token_returns_204_and_token_no_longer_listed() {
         .json(&json!({"name": "temp-token"}))
         .await;
     create_resp.assert_status(StatusCode::CREATED);
-    let token_id = create_resp.json::<Value>()["token_id"].as_str().unwrap().to_string();
+    let token_id = create_resp.json::<Value>()["token_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let del_resp = server
         .delete(&format!("/api/tokens/{token_id}"))
@@ -159,7 +165,10 @@ async fn pat_authenticates_successfully() {
         .json(&json!({"name": "api-key"}))
         .await;
     create_resp.assert_status(StatusCode::CREATED);
-    let pat = create_resp.json::<Value>()["token"].as_str().unwrap().to_string();
+    let pat = create_resp.json::<Value>()["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Use the PAT to create another token
     let resp = server
@@ -169,7 +178,10 @@ async fn pat_authenticates_successfully() {
         .await;
 
     resp.assert_status(StatusCode::CREATED);
-    assert!(resp.json::<Value>()["token"].as_str().unwrap().starts_with("ens_"));
+    assert!(resp.json::<Value>()["token"]
+        .as_str()
+        .unwrap()
+        .starts_with("ens_"));
 }
 
 // Revoked PAT is rejected with 401 on subsequent use

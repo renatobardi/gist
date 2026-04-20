@@ -21,7 +21,9 @@ DEFINE FIELD IF NOT EXISTS revoked_at ON personal_access_tokens TYPE option<date
 DEFINE INDEX IF NOT EXISTS pat_token_hash ON personal_access_tokens COLUMNS token_hash UNIQUE;
 "#;
 
-pub async fn run_migrations(db: &surrealdb::Surreal<surrealdb::engine::local::Db>) -> Result<(), surrealdb::Error> {
+pub async fn run_migrations(
+    db: &surrealdb::Surreal<surrealdb::engine::local::Db>,
+) -> Result<(), surrealdb::Error> {
     db.query(SCHEMA_SQL).await?;
     Ok(())
 }

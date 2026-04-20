@@ -42,7 +42,11 @@ impl LoginAttemptRepo for SurrealLoginAttemptRepo {
         Ok(())
     }
 
-    async fn count_recent_failures(&self, email: &str, window_seconds: u64) -> Result<u64, RepoError> {
+    async fn count_recent_failures(
+        &self,
+        email: &str,
+        window_seconds: u64,
+    ) -> Result<u64, RepoError> {
         let query = format!(
             "SELECT count() FROM login_attempts WHERE email = $email AND succeeded = false AND attempted_at > time::now() - {}s GROUP ALL",
             window_seconds
@@ -69,7 +73,11 @@ impl LoginAttemptRepo for SurrealLoginAttemptRepo {
         Ok(n)
     }
 
-    async fn oldest_recent_failure_ts(&self, email: &str, window_seconds: u64) -> Result<Option<i64>, RepoError> {
+    async fn oldest_recent_failure_ts(
+        &self,
+        email: &str,
+        window_seconds: u64,
+    ) -> Result<Option<i64>, RepoError> {
         let query = format!(
             "SELECT attempted_at FROM login_attempts WHERE email = $email AND succeeded = false AND attempted_at > time::now() - {}s ORDER BY attempted_at ASC LIMIT 1",
             window_seconds

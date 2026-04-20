@@ -1,4 +1,7 @@
-use axum::{routing::{delete, get, post}, Router};
+use axum::{
+    routing::{delete, get, post},
+    Router,
+};
 use tower::ServiceBuilder;
 
 use super::{
@@ -22,7 +25,13 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/tokens/{id}", delete(delete_token))
         .route("/", get(root_redirect))
         .with_state(state)
-        .layer(ServiceBuilder::new().layer(h1).layer(h2).layer(h3).layer(h4))
+        .layer(
+            ServiceBuilder::new()
+                .layer(h1)
+                .layer(h2)
+                .layer(h3)
+                .layer(h4),
+        )
 }
 
 async fn root_redirect(

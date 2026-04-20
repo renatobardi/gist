@@ -96,9 +96,7 @@ impl UserRepo for SurrealUserRepo {
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
         Ok(records.into_iter().next().map(|rec| User {
-            id: rec.id
-                .map(|t| t.to_string())
-                .unwrap_or_default(),
+            id: rec.id.map(|t| t.to_string()).unwrap_or_default(),
             email: rec.email,
             password_hash: rec.password_hash,
             role: rec.role,

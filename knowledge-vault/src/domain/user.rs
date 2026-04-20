@@ -1,5 +1,5 @@
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use email_address::EmailAddress;
 use rand::{rngs::OsRng, Rng};
@@ -152,7 +152,11 @@ mod tests {
     #[test]
     fn hash_pat_uses_different_salt_each_time() {
         let token = "ens_testtoken";
-        assert_ne!(hash_pat(token), hash_pat(token), "Argon2id hashes must use unique salts");
+        assert_ne!(
+            hash_pat(token),
+            hash_pat(token),
+            "Argon2id hashes must use unique salts"
+        );
     }
 
     #[test]

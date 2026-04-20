@@ -52,7 +52,12 @@ impl SurrealTokenRepo {
 
 #[async_trait]
 impl TokenRepo for SurrealTokenRepo {
-    async fn create(&self, user_id: &str, name: String, token_hash: String) -> Result<String, RepoError> {
+    async fn create(
+        &self,
+        user_id: &str,
+        name: String,
+        token_hash: String,
+    ) -> Result<String, RepoError> {
         let token_id = Uuid::new_v4().to_string();
 
         #[derive(Serialize)]
@@ -127,8 +132,7 @@ impl TokenRepo for SurrealTokenRepo {
             _ => {}
         }
 
-        self
-            .db
+        self.db
             .query("UPDATE type::thing('personal_access_tokens', $id) SET revoked_at = time::now()")
             .bind(("id", token_id.to_string()))
             .await
