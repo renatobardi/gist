@@ -1,15 +1,17 @@
 # Product Requirements Document: Knowledge Vault
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-04-20
 **PM Agent:** BMAD Pipeline — Phase 2
-**Issue:** REN-98
+**Issue:** REN-99
 **Input:** `_bmad/docs/product-brief.md` (Analyst, 2026-04-20)
 
 **Owner decisions incorporated:**
 - Concept graph UI is **in v1 scope** with BMW design system (DESIGN.md + preview.html)
 - First-run bootstrap: **email + password** (creates admin account on first launch)
-- Gemini output: **structured JSON via `response_schema`** — schema fully defined in FR-16
+- Gemini output: **structured JSON via `response_schema`** — schema fully defined in FR-20
+- OQ-05 resolved: **no minimum concept threshold** — accept any number Gemini returns, even 1
+- OQ-06 resolved: **free-form strings for domain** — domain filter uses `SELECT DISTINCT domain` at query time
 
 ---
 
@@ -118,7 +120,7 @@ Knowledge workers accumulate reading lists but lose the connective tissue betwee
 
 | FR-21 | The system prompt sent to Gemini must include: book title, author, Open Library description, and any available subject tags. Prompt target: < 4,000 tokens. |
 | FR-22 | The raw Gemini response must be stored in `insight.raw_gemini_response` for auditability. |
-| FR-23 | Concepts must be upserted by normalized name (lowercase, trimmed) — no duplicate concept nodes. |
+| FR-23 | Concepts must be upserted by normalized name (lowercase, trimmed) — no duplicate concept nodes. The system must accept any number of concepts returned by Gemini (including 1); there is no minimum threshold. |
 | FR-24 | Concept-to-concept edges (`relacionado_a`) must be created for all `related_concepts` entries returned by Gemini. |
 
 ### Knowledge Graph Persistence
@@ -514,6 +516,7 @@ Stories: US-20, US-21
 - **When** I select one or more domains from the filter
 - **Then** only nodes matching those domains are visible (and their edges)
 - **And** the graph re-renders without a page reload
+- **And** the domain list is populated dynamically via `SELECT DISTINCT domain FROM concept` (free-form strings, no fixed enum)
 
 **Dependencies:** US-17, FR-36
 **Effort:** S
@@ -602,9 +605,9 @@ The MVP is valid if: a user can submit 5 books by ISBN, have them all reach `don
 | OQ-02 | Should SurrealDB graph writes use `BEGIN TRANSACTION` / `COMMIT` in SurrealQL 3.0, or rely on individual statement atomicity? SurrealKV embedded transaction semantics need validation. | Architect | US-13 |
 | OQ-03 | NATS embedded server: is `async-nats` with the `server` feature sufficient, or must the NATS server binary be embedded as a subprocess? If subprocess, the single-binary constraint is partially broken. This is the highest-risk assumption in the brief. | Architect | E-03 |
 | OQ-04 | Login rate limiting: implement in Axum middleware (in-memory, resets on restart) or persist lockout state in SurrealDB? In-memory is simpler but loses state on restart. | Architect | US-02 |
-| OQ-05 | What is the minimum number of concepts per book to consider Gemini extraction "successful"? Suggested threshold: 3 concepts minimum before marking work `done`. Needs product owner confirmation. | Owner | FR-23 |
-| OQ-06 | Should concept domain values be free-form strings or constrained to an enum? Free-form allows more nuance but makes domain filtering less reliable. | Owner | FR-36 |
+| OQ-05 | ~~Minimum concept threshold~~ **Resolved:** No minimum threshold. Accept whatever Gemini returns (including 1 concept). A "poor" record is preferable to a failure or retry loop burning Gemini tokens. See FR-23. | ~~Owner~~ ✅ | — |
+| OQ-06 | ~~Enum vs free-form domain values~~ **Resolved:** Free-form strings. Domain filter (US-19) uses `SELECT DISTINCT domain FROM concept` at query time. Future normalization can be done via SurrealDB aggregation or Gemini post-processing. See FR-36, US-19. | ~~Owner~~ ✅ | — |
 
 ---
 
-*End of PRD v1.0 — Knowledge Vault*
+*End of PRD v1.1 — Knowledge Vault*
