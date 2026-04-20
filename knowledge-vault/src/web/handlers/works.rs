@@ -10,6 +10,7 @@ use tracing::info;
 
 use crate::{
     domain::work::{validate_isbn, WorkError},
+    ports::repository::RepoError,
     web::{middleware::auth::AuthenticatedUser, state::AppState},
 };
 
@@ -269,6 +270,92 @@ async fn handle_title(state: AppState, title: String) -> Response {
         Json(WorkCreatedResponse {
             work_id: work.id,
             status: work.status,
+        }),
+    )
+        .into_response()
+}
+
+pub async fn post_works_retry(
+    State(state): State<AppState>,
+    _auth: AuthenticatedUser,
+    Path(id): Path<String>,
+) -> Response {
+    let work = match state.work_repo.find_by_id(&id).await {
+        Ok(Some(w)) => w,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, Json(json!({ "error": "not_found" }))).into_response();
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal_error", "message": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    if work.status != "failed" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "not_failed" })),
+        )
+            .into_response();
+    }
+
+    let publisher = match &state.message_publisher {
+        Some(p) => p.clone(),
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "messaging_unavailable",
+                    "message": "NATS publisher is not initialised"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let updated = match state.work_repo.reset_to_pending(&id).await {
+        Ok(w) => w,
+        Err(RepoError::NotFound) => {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "status_changed" })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal_error", "message": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let event = serde_json::to_vec(&json!({
+        "work_id": updated.id,
+        "identifier": updated.isbn,
+        "identifier_type": "isbn"
+    }))
+    .expect("serialisation of a known-good value must not fail");
+
+    if let Err(e) = publisher.publish("discovery.requested", event).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "messaging_error", "message": e })),
+        )
+            .into_response();
+    }
+
+    info!(work_id = %updated.id, "manual retry triggered, discovery.requested published");
+
+    (
+        StatusCode::ACCEPTED,
+        Json(WorkCreatedResponse {
+            work_id: updated.id,
+            status: updated.status,
         }),
     )
         .into_response()

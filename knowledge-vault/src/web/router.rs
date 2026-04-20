@@ -10,7 +10,7 @@ use super::{
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
         websocket::ws_handler,
-        works::{get_work_by_id, get_works, post_works},
+        works::{get_work_by_id, get_works, post_works, post_works_retry},
     },
     middleware::security_headers::security_headers_layer,
     state::AppState,
@@ -27,6 +27,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/tokens/{id}", delete(delete_token))
         .route("/api/works", post(post_works).get(get_works))
         .route("/api/works/{id}", get(get_work_by_id))
+        .route("/api/works/{id}/retry", post(post_works_retry))
         .route("/ws", get(ws_handler))
         .route("/", get(root_redirect))
         .with_state(state)

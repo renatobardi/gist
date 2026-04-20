@@ -14,6 +14,7 @@ use knowledge_vault::{
     ports::{
         external::{OpenLibraryBook, OpenLibraryPort},
         messaging::MessagePublisher,
+        repository::WorkRepo,
     },
     web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
 };
@@ -73,6 +74,36 @@ async fn make_test_server_with_nats() -> TestServer {
     };
 
     TestServer::new(build_router(state)).unwrap()
+}
+
+async fn make_test_server_with_failed_work() -> (TestServer, String) {
+    let db = make_db().await;
+
+    let work_repo_setup = SurrealWorkRepo::new(db.clone());
+    let work = work_repo_setup.create_work("9780132350884").await.unwrap();
+    let work_id = work.id.clone();
+
+    db.query("UPDATE type::thing('work', $id) SET status = 'failed'")
+        .bind(("id", work_id.clone()))
+        .await
+        .unwrap();
+
+    let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
+    let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
+    let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
+    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let state = AppState {
+        user_repo,
+        login_attempt_repo,
+        token_repo,
+        work_repo,
+        message_publisher: Some(Arc::new(NoopPublisher)),
+        open_library_client: None,
+        ws_broadcaster: WsBroadcaster::new(),
+        jwt_secret: "test-secret".to_string(),
+    };
+
+    (TestServer::new(build_router(state)).unwrap(), work_id)
 }
 
 async fn make_test_server_no_nats() -> TestServer {
@@ -496,6 +527,78 @@ async fn get_work_by_id_without_auth_returns_401() {
 
     let resp = server
         .get("/api/works/00000000-0000-0000-0000-000000000000")
+        .await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+// POST /api/works/{id}/retry — retry a failed work → 202 with status=pending
+#[tokio::test]
+async fn post_works_retry_failed_work_returns_202() {
+    let (server, work_id) = make_test_server_with_failed_work().await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post(&format!("/api/works/{work_id}/retry"))
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::ACCEPTED);
+    let body: Value = resp.json();
+    assert_eq!(body["work_id"], work_id);
+    assert_eq!(body["status"], "pending");
+}
+
+// POST /api/works/{id}/retry — retry a pending (non-failed) work → 400 not_failed
+#[tokio::test]
+async fn post_works_retry_non_failed_work_returns_400() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let submit = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
+        .await;
+    submit.assert_status(StatusCode::ACCEPTED);
+    let work_id = submit.json::<Value>()["work_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .post(&format!("/api/works/{work_id}/retry"))
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "not_failed");
+}
+
+// POST /api/works/{id}/retry — unknown work → 404
+#[tokio::test]
+async fn post_works_retry_unknown_work_returns_404() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works/00000000-0000-0000-0000-000000000000/retry")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::NOT_FOUND);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "not_found");
+}
+
+// POST /api/works/{id}/retry — without auth → 401
+#[tokio::test]
+async fn post_works_retry_without_auth_returns_401() {
+    let (server, work_id) = make_test_server_with_failed_work().await;
+
+    let resp = server
+        .post(&format!("/api/works/{work_id}/retry"))
         .await;
 
     resp.assert_status(StatusCode::UNAUTHORIZED);

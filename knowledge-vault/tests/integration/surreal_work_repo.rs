@@ -141,6 +141,29 @@ async fn get_work_by_id_returns_none_for_unknown_id() {
 }
 
 #[tokio::test]
+async fn find_by_id_returns_some_for_existing_work() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+
+    let found = repo.find_by_id(&created.id).await.unwrap();
+    assert!(found.is_some());
+    let found = found.unwrap();
+    assert_eq!(found.id, created.id);
+    assert_eq!(found.isbn, Some("9780132350884".to_string()));
+    assert_eq!(found.status, "pending");
+}
+
+#[tokio::test]
+async fn find_by_id_returns_none_for_unknown_id() {
+    let repo = make_repo().await;
+    let found = repo
+        .find_by_id("00000000-0000-0000-0000-000000000000")
+        .await
+        .unwrap();
+    assert!(found.is_none());
+}
+
+#[tokio::test]
 async fn update_work_status_changes_status() {
     let repo = make_repo().await;
     let created = repo.create_work("9780132350884").await.unwrap();
@@ -182,4 +205,18 @@ async fn update_work_status_returns_not_found_for_unknown_id() {
         result,
         Err(knowledge_vault::ports::repository::RepoError::NotFound)
     ));
+}
+
+#[tokio::test]
+async fn reset_to_pending_updates_work_status() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+
+    repo.update_work_status(&created.id, "failed", Some("network error"))
+        .await
+        .unwrap();
+
+    let reset = repo.reset_to_pending(&created.id).await.unwrap();
+    assert_eq!(reset.id, created.id);
+    assert_eq!(reset.status, "pending");
 }
