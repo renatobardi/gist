@@ -22,6 +22,7 @@ base64 = "0.22"
 async-trait = "0.1"
 anyhow = "1"
 async-nats = "0.37"
+futures = "0.3"
 jsonwebtoken = "9"
 chrono = { version = "0.4", features = ["serde"] }
 
