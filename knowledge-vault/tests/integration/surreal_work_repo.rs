@@ -67,10 +67,7 @@ async fn find_by_open_library_id_returns_some_for_existing_id() {
         .await
         .unwrap();
 
-    let found = repo
-        .find_by_open_library_id("/works/OL123W")
-        .await
-        .unwrap();
+    let found = repo.find_by_open_library_id("/works/OL123W").await.unwrap();
     assert!(found.is_some());
     let found = found.unwrap();
     assert_eq!(found.open_library_id, Some("/works/OL123W".to_string()));
