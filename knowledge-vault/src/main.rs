@@ -14,7 +14,7 @@ use adapters::{
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
 };
-use web::{router::build_router, state::AppState};
+use web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -87,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
+    let ws_broadcaster = WsBroadcaster::new();
     let state = AppState {
         user_repo,
         login_attempt_repo,
@@ -94,6 +95,7 @@ async fn main() -> anyhow::Result<()> {
         work_repo,
         message_publisher,
         open_library_client,
+        ws_broadcaster,
         jwt_secret,
     };
     let router = build_router(state);

@@ -1,8 +1,9 @@
 use axum::{
-    extract::State,
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
 };
+use serde::Deserialize as QueryDeserialize;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::info;
@@ -81,8 +82,6 @@ async fn handle_isbn(state: AppState, identifier: String) -> Response {
         }
     }
 
-    // Check publisher before creating work so a missing NATS connection never
-    // leaves an orphaned record that blocks future submissions of the same ISBN.
     let publisher = match &state.message_publisher {
         Some(p) => p.clone(),
         None => {
@@ -100,8 +99,6 @@ async fn handle_isbn(state: AppState, identifier: String) -> Response {
     let work = match state.work_repo.create_work(&isbn).await {
         Ok(w) => w,
         Err(e) => {
-            // A concurrent request may have won the race and hit the unique index.
-            // Re-check so we return 409 instead of a misleading 500.
             if let Ok(Some(existing)) = state.work_repo.find_by_isbn(&isbn).await {
                 info!(isbn = %isbn, existing_work_id = %existing.id, "duplicate ISBN detected on race, returning 409");
                 return (
@@ -230,7 +227,6 @@ async fn handle_title(state: AppState, title: String) -> Response {
     {
         Ok(w) => w,
         Err(e) => {
-            // A concurrent request may have won the race and hit the unique index.
             if let Ok(Some(existing)) = state
                 .work_repo
                 .find_by_open_library_id(&book.open_library_id)
@@ -276,4 +272,48 @@ async fn handle_title(state: AppState, title: String) -> Response {
         }),
     )
         .into_response()
+}
+
+#[derive(QueryDeserialize)]
+pub struct ListWorksParams {
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+pub async fn get_works(
+    State(state): State<AppState>,
+    _auth: AuthenticatedUser,
+    Query(params): Query<ListWorksParams>,
+) -> Response {
+    let limit = params.limit.unwrap_or(50).min(200);
+    let offset = params.offset.unwrap_or(0);
+
+    match state.work_repo.list_works(limit, offset).await {
+        Ok(works) => Json(works).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "internal_error", "message": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn get_work_by_id(
+    State(state): State<AppState>,
+    _auth: AuthenticatedUser,
+    Path(id): Path<String>,
+) -> Response {
+    match state.work_repo.get_work_by_id(&id).await {
+        Ok(Some(work)) => Json(work).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "not_found", "message": "Work not found" })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "internal_error", "message": e.to_string() })),
+        )
+            .into_response(),
+    }
 }

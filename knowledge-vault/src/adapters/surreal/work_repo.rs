@@ -23,23 +23,24 @@ struct WorkRecord {
     isbn: Option<String>,
     open_library_id: Option<String>,
     status: String,
+    error_msg: Option<String>,
+    created_at: String,
+    updated_at: String,
 }
 
-impl WorkRecord {
-    fn into_work(self, fallback_id: Option<String>) -> Work {
-        let id = self
-            .id
-            .map(|t| thing_id_to_string(t.id))
-            .or(fallback_id)
-            .unwrap_or_default();
-        Work {
-            id,
-            title: self.title,
-            author: self.author,
-            isbn: self.isbn,
-            open_library_id: self.open_library_id,
-            status: self.status,
-        }
+fn record_to_work(rec: WorkRecord, id_override: Option<String>) -> Work {
+    let id =
+        id_override.unwrap_or_else(|| rec.id.map(|t| thing_id_to_string(t.id)).unwrap_or_default());
+    Work {
+        id,
+        title: rec.title,
+        author: rec.author,
+        isbn: rec.isbn,
+        open_library_id: rec.open_library_id,
+        status: rec.status,
+        error_msg: rec.error_msg,
+        created_at: rec.created_at,
+        updated_at: rec.updated_at,
     }
 }
 
@@ -67,31 +68,30 @@ impl WorkRepo for SurrealWorkRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        Ok(records.into_iter().next().map(|rec| rec.into_work(None)))
+        Ok(records
+            .into_iter()
+            .next()
+            .map(|rec| record_to_work(rec, None)))
     }
 
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError> {
         let work_id = Uuid::new_v4().to_string();
 
-        let record = WorkRecord {
-            id: None,
-            title: String::new(),
-            author: String::new(),
-            isbn: Some(isbn.to_string()),
-            open_library_id: None,
-            status: "pending".to_string(),
-        };
-
         let created: Option<WorkRecord> = self
             .db
             .create(("work", work_id.clone()))
-            .content(record)
+            .content(serde_json::json!({
+                "isbn": isbn,
+                "title": "",
+                "author": "",
+                "status": "pending",
+            }))
             .await
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
         let rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
 
-        Ok(rec.into_work(Some(work_id)))
+        Ok(record_to_work(rec, Some(work_id)))
     }
 
     async fn find_by_open_library_id(&self, ol_id: &str) -> Result<Option<Work>, RepoError> {
@@ -106,7 +106,10 @@ impl WorkRepo for SurrealWorkRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        Ok(records.into_iter().next().map(|rec| rec.into_work(None)))
+        Ok(records
+            .into_iter()
+            .next()
+            .map(|rec| record_to_work(rec, None)))
     }
 
     async fn create_work_by_title(
@@ -117,24 +120,75 @@ impl WorkRepo for SurrealWorkRepo {
     ) -> Result<Work, RepoError> {
         let work_id = Uuid::new_v4().to_string();
 
-        let record = WorkRecord {
-            id: None,
-            title: title.to_string(),
-            author: author.to_string(),
-            isbn: None,
-            open_library_id: Some(open_library_id.to_string()),
-            status: "pending".to_string(),
-        };
-
         let created: Option<WorkRecord> = self
             .db
             .create(("work", work_id.clone()))
-            .content(record)
+            .content(serde_json::json!({
+                "title": title,
+                "author": author,
+                "open_library_id": open_library_id,
+                "status": "pending",
+            }))
             .await
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
         let rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
 
-        Ok(rec.into_work(Some(work_id)))
+        Ok(record_to_work(rec, Some(work_id)))
+    }
+
+    async fn list_works(&self, limit: u32, offset: u32) -> Result<Vec<Work>, RepoError> {
+        let mut result = self
+            .db
+            .query("SELECT * FROM work ORDER BY created_at DESC LIMIT $limit START $offset")
+            .bind(("limit", limit))
+            .bind(("offset", offset))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let records: Vec<WorkRecord> = result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        Ok(records
+            .into_iter()
+            .map(|rec| record_to_work(rec, None))
+            .collect())
+    }
+
+    async fn get_work_by_id(&self, id: &str) -> Result<Option<Work>, RepoError> {
+        let record: Option<WorkRecord> = self
+            .db
+            .select(("work", id))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        Ok(record.map(|rec| record_to_work(rec, Some(id.to_string()))))
+    }
+
+    async fn update_work_status(
+        &self,
+        id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError> {
+        let updated: Option<WorkRecord> = self
+            .db
+            .query(
+                "UPDATE work SET status = $status, error_msg = $error_msg, updated_at = time::now() WHERE id = type::thing('work', $id)",
+            )
+            .bind(("id", id.to_string()))
+            .bind(("status", status.to_string()))
+            .bind(("error_msg", error_msg.map(|s| s.to_string())))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        if updated.is_none() {
+            return Err(RepoError::NotFound);
+        }
+
+        Ok(())
     }
 }

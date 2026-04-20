@@ -83,3 +83,79 @@ async fn find_by_open_library_id_returns_none_for_unknown_id() {
         .unwrap();
     assert!(found.is_none());
 }
+
+#[tokio::test]
+async fn list_works_returns_all_works_in_descending_order() {
+    let repo = make_repo().await;
+    repo.create_work("9780132350884").await.unwrap();
+    repo.create_work("0132350882").await.unwrap();
+
+    let works = repo.list_works(50, 0).await.unwrap();
+    assert_eq!(works.len(), 2);
+    assert!(works.iter().all(|w| w.status == "pending"));
+}
+
+#[tokio::test]
+async fn list_works_respects_limit() {
+    let repo = make_repo().await;
+    repo.create_work("9780132350884").await.unwrap();
+    repo.create_work("0132350882").await.unwrap();
+
+    let works = repo.list_works(1, 0).await.unwrap();
+    assert_eq!(works.len(), 1);
+}
+
+#[tokio::test]
+async fn get_work_by_id_returns_some_for_known_id() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+
+    let found = repo.get_work_by_id(&created.id).await.unwrap();
+    assert!(found.is_some());
+    let found = found.unwrap();
+    assert_eq!(found.id, created.id);
+    assert_eq!(found.isbn, Some("9780132350884".to_string()));
+    assert_eq!(found.status, "pending");
+}
+
+#[tokio::test]
+async fn get_work_by_id_returns_none_for_unknown_id() {
+    let repo = make_repo().await;
+    let found = repo
+        .get_work_by_id("00000000-0000-0000-0000-000000000000")
+        .await
+        .unwrap();
+    assert!(found.is_none());
+}
+
+#[tokio::test]
+async fn update_work_status_changes_status() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+    assert_eq!(created.status, "pending");
+
+    repo.update_work_status(&created.id, "processing", None)
+        .await
+        .unwrap();
+
+    let updated = repo.get_work_by_id(&created.id).await.unwrap().unwrap();
+    assert_eq!(updated.status, "processing");
+    assert!(updated.error_msg.is_none());
+}
+
+#[tokio::test]
+async fn update_work_status_sets_error_msg_on_failure() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+
+    repo.update_work_status(&created.id, "failed", Some("timeout calling Gemini API"))
+        .await
+        .unwrap();
+
+    let updated = repo.get_work_by_id(&created.id).await.unwrap().unwrap();
+    assert_eq!(updated.status, "failed");
+    assert_eq!(
+        updated.error_msg.as_deref(),
+        Some("timeout calling Gemini API")
+    );
+}

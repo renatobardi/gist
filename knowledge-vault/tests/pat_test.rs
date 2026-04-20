@@ -10,7 +10,7 @@ use knowledge_vault::{
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
-    web::{router::build_router, state::AppState},
+    web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
 };
 
 async fn make_test_server() -> TestServer {
@@ -29,6 +29,7 @@ async fn make_test_server() -> TestServer {
         work_repo,
         message_publisher: None,
         open_library_client: None,
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
 
