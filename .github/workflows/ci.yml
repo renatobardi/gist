@@ -23,10 +23,12 @@ jobs:
       - uses: mozilla-actions/sccache-action@v0.0.4
 
       - name: Run clippy
-        run: cargo clippy -p knowledge-vault -- -D warnings
+        working-directory: knowledge-vault
+        run: cargo clippy -- -D warnings
 
       - name: Check formatting
-        run: cargo fmt -p knowledge-vault -- --check
+        working-directory: knowledge-vault
+        run: cargo fmt -- --check
 
   test:
     name: Test
@@ -39,4 +41,5 @@ jobs:
       - uses: mozilla-actions/sccache-action@v0.0.4
 
       - name: Run tests
-        run: cargo test -p knowledge-vault
+        working-directory: knowledge-vault
+        run: cargo test
