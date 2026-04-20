@@ -9,6 +9,12 @@ use crate::{
     ports::repository::{RepoError, TokenRepo},
 };
 
+fn record_id_to_string(thing: Option<surrealdb::sql::Thing>) -> Result<String, RepoError> {
+    thing
+        .map(|t| t.id.to_string())
+        .ok_or_else(|| RepoError::Internal("record returned without an ID".into()))
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct PatRecord {
     id: Option<surrealdb::sql::Thing>,
@@ -20,9 +26,9 @@ struct PatRecord {
 }
 
 impl PatRecord {
-    fn into_domain(self) -> PersonalAccessToken {
-        PersonalAccessToken {
-            id: self.id.map(|t| t.id.to_string()).unwrap_or_default(),
+    fn into_domain(self) -> Result<PersonalAccessToken, RepoError> {
+        Ok(PersonalAccessToken {
+            id: record_id_to_string(self.id)?,
             user_id: self.user_id,
             name: self.name,
             created_at: self
@@ -30,7 +36,7 @@ impl PatRecord {
                 .map(|dt| dt.to_rfc3339())
                 .unwrap_or_default(),
             revoked_at: self.revoked_at.map(|dt| dt.to_rfc3339()),
-        }
+        })
     }
 }
 
@@ -85,7 +91,7 @@ impl TokenRepo for SurrealTokenRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        Ok(records.into_iter().map(|r| r.into_domain()).collect())
+        records.into_iter().map(|r| r.into_domain()).collect()
     }
 
     async fn find_by_hash(&self, token_hash: &str) -> Result<Option<PersonalAccessToken>, RepoError> {
@@ -101,7 +107,7 @@ impl TokenRepo for SurrealTokenRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        Ok(records.into_iter().next().map(|r| r.into_domain()))
+        records.into_iter().next().map(|r| r.into_domain()).transpose()
     }
 
     async fn revoke(&self, token_id: &str, user_id: &str) -> Result<(), RepoError> {

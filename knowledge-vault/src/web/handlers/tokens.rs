@@ -28,7 +28,6 @@ pub struct TokenListItem {
     pub token_id: String,
     pub name: String,
     pub created_at: String,
-    pub revoked_at: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -101,7 +100,6 @@ pub async fn get_tokens(State(state): State<AppState>, auth: AuthenticatedUser) 
                     token_id: t.id,
                     name: t.name,
                     created_at: t.created_at,
-                    revoked_at: t.revoked_at,
                 })
                 .collect();
             Json(items).into_response()
