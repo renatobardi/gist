@@ -49,7 +49,8 @@ impl UserRepo for SurrealUserRepo {
     }
 
     async fn create(&self, email: String, password_hash: String) -> Result<User, RepoError> {
-        let id = format!("users:{}", Uuid::new_v4());
+        let uuid = Uuid::new_v4().to_string();
+        let id = format!("users:{uuid}");
 
         let record = UserRecord {
             id: None,
@@ -60,7 +61,7 @@ impl UserRepo for SurrealUserRepo {
 
         let created: Option<UserRecord> = self
             .db
-            .create(("users", Uuid::new_v4().to_string()))
+            .create(("users", uuid))
             .content(record)
             .await
             .map_err(|e| {

@@ -11,6 +11,7 @@ pub struct User {
 #[derive(Debug, PartialEq)]
 pub enum ValidationError {
     PasswordTooShort,
+    PasswordTooLong,
     InvalidEmail(String),
 }
 
@@ -20,14 +21,21 @@ impl std::fmt::Display for ValidationError {
             ValidationError::PasswordTooShort => {
                 write!(f, "Password must be at least 12 characters")
             }
+            ValidationError::PasswordTooLong => {
+                write!(f, "Password must be at most 1024 characters")
+            }
             ValidationError::InvalidEmail(msg) => write!(f, "Invalid email: {msg}"),
         }
     }
 }
 
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
-    if password.len() < 12 {
+    let len = password.chars().count();
+    if len < 12 {
         return Err(ValidationError::PasswordTooShort);
+    }
+    if len > 1024 {
+        return Err(ValidationError::PasswordTooLong);
     }
     Ok(())
 }
@@ -88,5 +96,20 @@ mod tests {
     #[test]
     fn valid_email_with_subdomain_is_accepted() {
         assert!(validate_email("admin@mail.example.org").is_ok());
+    }
+
+    #[test]
+    fn password_over_1024_chars_is_invalid() {
+        let long = "a".repeat(1025);
+        assert_eq!(
+            validate_password(&long).unwrap_err(),
+            ValidationError::PasswordTooLong
+        );
+    }
+
+    #[test]
+    fn password_exactly_1024_chars_is_valid() {
+        let max = "a".repeat(1024);
+        assert!(validate_password(&max).is_ok());
     }
 }

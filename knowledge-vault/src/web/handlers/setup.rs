@@ -62,7 +62,7 @@ pub async fn get_setup(State(state): State<AppState>) -> Response {
                 Json(ErrorResponse {
                     error: "internal_error".into(),
                     message: e.to_string(),
-                    status: 500,
+                    status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
                 }),
             )
                 .into_response()
@@ -104,7 +104,6 @@ async fn handle_setup(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
                 &e.to_string(),
-                500,
                 is_json,
             )
         }
@@ -115,7 +114,6 @@ async fn handle_setup(
             StatusCode::CONFLICT,
             "already_configured",
             "An admin account already exists",
-            409,
             is_json,
         );
     }
@@ -126,7 +124,6 @@ async fn handle_setup(
             StatusCode::UNPROCESSABLE_ENTITY,
             "invalid_email",
             &e.to_string(),
-            422,
             is_json,
         );
     }
@@ -136,7 +133,6 @@ async fn handle_setup(
             StatusCode::UNPROCESSABLE_ENTITY,
             "invalid_password",
             &e.to_string(),
-            422,
             is_json,
         );
     }
@@ -149,7 +145,6 @@ async fn handle_setup(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
                 &e,
-                500,
                 is_json,
             )
         }
@@ -172,7 +167,6 @@ async fn handle_setup(
             StatusCode::INTERNAL_SERVER_ERROR,
             "internal_error",
             &e.to_string(),
-            500,
             is_json,
         ),
     }
@@ -189,20 +183,14 @@ fn hash_password(password: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-fn error_response(
-    status: StatusCode,
-    error: &str,
-    message: &str,
-    code: u16,
-    is_json: bool,
-) -> Response {
+fn error_response(status: StatusCode, error: &str, message: &str, is_json: bool) -> Response {
     if is_json {
         (
             status,
             Json(ErrorResponse {
                 error: error.into(),
                 message: message.into(),
-                status: code,
+                status: status.as_u16(),
             }),
         )
             .into_response()
@@ -211,11 +199,21 @@ fn error_response(
     }
 }
 
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#x27;")
+}
+
 fn setup_html(error: &str, email: &str) -> String {
+    let error_escaped = html_escape(error);
+    let email_escaped = html_escape(email);
     let error_html = if error.is_empty() {
         String::new()
     } else {
-        format!(r#"<p class="error" role="alert" aria-live="polite">{error}</p>"#)
+        format!(r#"<p class="error" role="alert" aria-live="polite">{error_escaped}</p>"#)
     };
 
     format!(
@@ -316,7 +314,7 @@ fn setup_html(error: &str, email: &str) -> String {
         id="email"
         type="email"
         name="email"
-        value="{email}"
+        value="{email_escaped}"
         required
         autocomplete="email"
         aria-describedby="email-hint"

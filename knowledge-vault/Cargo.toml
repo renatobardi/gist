@@ -17,7 +17,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["set-header"] }
 http = "1"
-rand = "0.8"
 async-trait = "0.1"
 anyhow = "1"
 

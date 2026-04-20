@@ -138,3 +138,22 @@ async fn root_redirects_to_setup_on_first_run() {
     response.assert_status(StatusCode::SEE_OTHER);
     assert_eq!(response.headers().get("location").unwrap(), "/setup");
 }
+
+// RED: root / redirects to /login after admin is created
+#[tokio::test]
+async fn root_redirects_to_login_after_setup() {
+    let server = make_test_server().await;
+
+    server
+        .post("/api/setup")
+        .json(&json!({
+            "email": "admin@example.com",
+            "password": "validpassword1"
+        }))
+        .await
+        .assert_status(StatusCode::CREATED);
+
+    let response = server.get("/").await;
+    response.assert_status(StatusCode::SEE_OTHER);
+    assert_eq!(response.headers().get("location").unwrap(), "/login");
+}
