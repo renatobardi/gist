@@ -56,8 +56,8 @@ Response:
 
 ```json
 {
-  "token_id": "550e8400-e29b-41d4-a716-446655440000",
-  "token": "ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92",
+  "token_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "token": "ens_<32-bytes-base64url>",
   "name": "github-actions-deploy"
 }
 ```
@@ -85,8 +85,8 @@ Response:
 ```bash
 #!/bin/bash
 
-# Set the PAT (preferably from environment variable or secret manager)
-PAT="ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92"
+# Load the PAT from environment (never hardcode tokens in scripts)
+PAT="${VAULT_PAT:?VAULT_PAT env var is required}"
 VAULT_URL="https://vault.example.com"
 
 # Make API calls with the PAT
@@ -113,12 +113,10 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Create token
+      - name: List active tokens
         run: |
-          curl -X POST https://vault.example.com/api/tokens \
-            -H "Authorization: Bearer ${{ secrets.KNOWLEDGE_VAULT_PAT }}" \
-            -H "Content-Type: application/json" \
-            -d '{"name": "ci-backup-'$(date +%s)'"}'
+          curl -X GET https://vault.example.com/api/tokens \
+            -H "Authorization: Bearer ${{ secrets.KNOWLEDGE_VAULT_PAT }}"
 ```
 
 ### In Python
@@ -130,17 +128,16 @@ import os
 PAT = os.environ.get("KNOWLEDGE_VAULT_PAT")
 VAULT_URL = "https://vault.example.com"
 
-# Create a token
-response = requests.post(
+# List active tokens
+response = requests.get(
     f"{VAULT_URL}/api/tokens",
-    headers={"Authorization": f"Bearer {PAT}"},
-    json={"name": "python-script"}
+    headers={"Authorization": f"Bearer {PAT}"}
 )
 
-if response.status_code == 201:
-    token_data = response.json()
-    print(f"Token ID: {token_data['token_id']}")
-    print(f"Token: {token_data['token']}")
+if response.status_code == 200:
+    tokens = response.json()
+    for t in tokens:
+        print(f"{t['name']} (ID: {t['token_id']}, created: {t['created_at']})")
 else:
     print(f"Error: {response.status_code}")
 ```
@@ -151,20 +148,16 @@ else:
 const PAT = process.env.KNOWLEDGE_VAULT_PAT;
 const VAULT_URL = "https://vault.example.com";
 
-// Create a token
+// List active tokens
 const response = await fetch(`${VAULT_URL}/api/tokens`, {
-  method: "POST",
   headers: {
-    "Authorization": `Bearer ${PAT}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({ name: "nodejs-script" })
+    "Authorization": `Bearer ${PAT}`
+  }
 });
 
 if (response.ok) {
-  const tokenData = await response.json();
-  console.log(`Token ID: ${tokenData.token_id}`);
-  console.log(`Token: ${tokenData.token}`);
+  const tokens = await response.json();
+  tokens.forEach(t => console.log(`${t.name} (ID: ${t.token_id})`));
 } else {
   console.error(`Error: ${response.status}`);
 }
@@ -184,12 +177,12 @@ Response:
 ```json
 [
   {
-    "token_id": "550e8400-e29b-41d4-a716-446655440000",
+    "token_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "name": "github-actions-deploy",
     "created_at": "2026-04-20T18:42:47Z"
   },
   {
-    "token_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+    "token_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
     "name": "backup-script",
     "created_at": "2026-04-21T10:15:30Z"
   }
@@ -276,7 +269,7 @@ Example using AWS Secrets Manager:
 # Store the PAT
 aws secretsmanager create-secret \
   --name knowledge-vault/github-actions \
-  --secret-string "ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92"
+  --secret-string "$VAULT_PAT"
 
 # Retrieve in a script
 PAT=$(aws secretsmanager get-secret-value \

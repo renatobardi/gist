@@ -10,12 +10,12 @@ PATs use a fixed `ens_` prefix followed by 32 cryptographically random bytes enc
 ens_<32-bytes-base64url>
 ```
 
-Example: `ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92`
+Example: `ens_<32-bytes-base64url>`
 
 ## Storage & Security
 
 - **Generation**: Random bytes generated using OS-level entropy (OsRng)
-- **Hashing**: Argon2id password hash with random salt (OWASP 2026 parameters: m=65536, t=3, p=1)
+- **Hashing**: Argon2id password hash with random salt (OWASP recommended parameters: m=19456, t=2, p=1)
 - **Display**: Raw token shown **only once** at creation time; never returned in list operations
 - **Storage**: Only the Argon2id hash is persisted in SurrealDB
 - **Verification**: Runtime comparison using Argon2id verification
@@ -45,7 +45,7 @@ Content-Type: application/json
 ```json
 {
   "token_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "token": "ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92",
+  "token": "ens_<32-bytes-base64url>",
   "name": "ci-deployment-token"
 }
 ```
@@ -146,7 +146,6 @@ Token successfully revoked. Subsequent uses of this token will be rejected with 
 Returned when:
 - Token ID does not exist
 - Token belongs to a different user
-- Token was already revoked
 
 **Response: 401 Unauthorized**
 
@@ -159,7 +158,7 @@ Returned when authentication fails (see Create endpoint).
 PATs are used identically to JWT tokens — pass them as Bearer tokens in the Authorization header:
 
 ```bash
-curl -H "Authorization: Bearer ens_UcRUcI92UcRUcI92UcRUcI92UcRUcI92" \
+curl -H "Authorization: Bearer $VAULT_PAT" \
      https://vault.example.com/api/tokens
 ```
 

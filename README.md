@@ -486,7 +486,7 @@ Revoked tokens are immediately rejected with 401 on subsequent requests.
 
 #### PAT Details
 - **Format**: `ens_` prefix followed by 32 random bytes (base64url-encoded)
-- **Storage**: Hashed with Argon2id (OWASP 2026 parameters: m=65536, t=3, p=1)
+- **Storage**: Hashed with Argon2id (OWASP recommended parameters: m=19456, t=2, p=1)
 - **Display**: Shown only once at creation time; never returned in list operations
 - **Permissions**: Inherits all permissions from the user who created it
 - **Usage**: Ideal for CI/CD, batch operations, and service-to-service communication

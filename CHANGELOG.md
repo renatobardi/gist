@@ -10,7 +10,7 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Personal Access Token (PAT) generation and management: `POST /api/tokens`, `GET /api/tokens`, `DELETE /api/tokens/{id}`
 - PAT format: `ens_` prefix followed by 32 random bytes (base64url-encoded)
 - PAT authentication: PATs work identically to JWT tokens in Authorization header
-- PAT storage: Hashed with Argon2id (OWASP 2026 parameters) before storage
+- PAT storage: Hashed with Argon2id (OWASP recommended parameters: m=19456, t=2, p=1) before storage
 - PAT security: Raw token shown only once at creation; never returned in list operations
 - Token metadata: Creation timestamp, human-readable name, unique ID for revocation
 - Revocation support: Immediate rejection of revoked tokens (401 Unauthorized)
