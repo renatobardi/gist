@@ -9,6 +9,7 @@ use super::{
         auth::post_login,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
+        works::post_works,
     },
     middleware::security_headers::security_headers_layer,
     state::AppState,
@@ -23,6 +24,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/auth/login", post(post_login))
         .route("/api/tokens", post(post_token).get(get_tokens))
         .route("/api/tokens/{id}", delete(delete_token))
+        .route("/api/works", post(post_works))
         .route("/", get(root_redirect))
         .with_state(state)
         .layer(
