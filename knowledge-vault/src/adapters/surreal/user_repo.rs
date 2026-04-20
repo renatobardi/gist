@@ -81,4 +81,27 @@ impl UserRepo for SurrealUserRepo {
             role: rec.role,
         })
     }
+
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
+        let email_owned = email.to_string();
+        let mut result = self
+            .db
+            .query("SELECT * FROM users WHERE email = $email LIMIT 1")
+            .bind(("email", email_owned))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let records: Vec<UserRecord> = result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        Ok(records.into_iter().next().map(|rec| User {
+            id: rec.id
+                .map(|t| t.to_string())
+                .unwrap_or_default(),
+            email: rec.email,
+            password_hash: rec.password_hash,
+            role: rec.role,
+        }))
+    }
 }

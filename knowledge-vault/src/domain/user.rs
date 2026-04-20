@@ -1,4 +1,5 @@
 use email_address::EmailAddress;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -6,6 +7,12 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthClaims {
+    pub sub: String,
+    pub exp: u64,
 }
 
 #[derive(Debug, PartialEq)]

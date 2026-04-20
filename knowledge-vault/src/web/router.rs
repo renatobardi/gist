@@ -1,8 +1,11 @@
-use axum::{routing::get, Router};
+use axum::{routing::{get, post}, Router};
 use tower::ServiceBuilder;
 
 use super::{
-    handlers::setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
+    handlers::{
+        auth::post_login,
+        setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
+    },
     middleware::security_headers::security_headers_layer,
     state::AppState,
 };
@@ -13,6 +16,7 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/setup", get(get_setup).post(post_setup_form))
         .route("/api/setup", get(get_setup_json).post(post_setup_json))
+        .route("/auth/login", post(post_login))
         .route("/", get(root_redirect))
         .with_state(state)
         .layer(ServiceBuilder::new().layer(h1).layer(h2).layer(h3).layer(h4))
