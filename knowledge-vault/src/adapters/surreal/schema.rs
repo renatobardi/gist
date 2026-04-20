@@ -23,13 +23,14 @@ DEFINE INDEX IF NOT EXISTS pat_token_hash ON personal_access_tokens COLUMNS toke
 DEFINE TABLE IF NOT EXISTS work SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS title          ON work TYPE string DEFAULT '';
 DEFINE FIELD IF NOT EXISTS author         ON work TYPE string DEFAULT '';
-DEFINE FIELD IF NOT EXISTS isbn           ON work TYPE string;
+DEFINE FIELD IF NOT EXISTS isbn           ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS open_library_id ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS status         ON work TYPE string DEFAULT 'pending';
 DEFINE FIELD IF NOT EXISTS error_msg      ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS updated_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE INDEX IF NOT EXISTS work_isbn ON work COLUMNS isbn UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_ol_id ON work COLUMNS open_library_id UNIQUE;
 "#;
 
 pub async fn run_migrations(

@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Work {
     pub id: String,
-    pub isbn: String,
+    pub title: String,
+    pub author: String,
+    pub isbn: Option<String>,
+    pub open_library_id: Option<String>,
     pub status: String,
 }
 

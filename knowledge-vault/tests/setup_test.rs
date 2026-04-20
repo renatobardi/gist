@@ -28,6 +28,7 @@ async fn make_test_server() -> TestServer {
         token_repo,
         work_repo,
         message_publisher: None,
+        open_library_client: None,
         jwt_secret: "test-secret".to_string(),
     };
     let router = build_router(state);

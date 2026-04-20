@@ -11,7 +11,10 @@ use knowledge_vault::{
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
-    ports::messaging::MessagePublisher,
+    ports::{
+        external::{OpenLibraryBook, OpenLibraryPort},
+        messaging::MessagePublisher,
+    },
     web::{router::build_router, state::AppState},
 };
 
@@ -24,10 +27,26 @@ impl MessagePublisher for NoopPublisher {
     }
 }
 
-async fn make_test_server_with_nats() -> TestServer {
+struct MockOpenLibraryClient {
+    result: Option<OpenLibraryBook>,
+}
+
+#[async_trait]
+impl OpenLibraryPort for MockOpenLibraryClient {
+    async fn search_by_title(&self, _title: &str) -> Result<Option<OpenLibraryBook>, String> {
+        Ok(self.result.clone())
+    }
+}
+
+async fn make_db() -> surrealdb::Surreal<surrealdb::engine::local::Db> {
     let db: Surreal<surrealdb::engine::local::Db> = Surreal::new::<Mem>(()).await.unwrap();
     db.use_ns("kv_test").use_db("kv_test").await.unwrap();
     run_migrations(&db).await.unwrap();
+    db
+}
+
+async fn make_test_server_with_nats() -> TestServer {
+    let db = make_db().await;
 
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
@@ -39,6 +58,7 @@ async fn make_test_server_with_nats() -> TestServer {
         token_repo,
         work_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
+        open_library_client: None,
         jwt_secret: "test-secret".to_string(),
     };
 
@@ -46,9 +66,7 @@ async fn make_test_server_with_nats() -> TestServer {
 }
 
 async fn make_test_server_no_nats() -> TestServer {
-    let db: Surreal<surrealdb::engine::local::Db> = Surreal::new::<Mem>(()).await.unwrap();
-    db.use_ns("kv_test").use_db("kv_test").await.unwrap();
-    run_migrations(&db).await.unwrap();
+    let db = make_db().await;
 
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
@@ -60,6 +78,27 @@ async fn make_test_server_no_nats() -> TestServer {
         token_repo,
         work_repo,
         message_publisher: None,
+        open_library_client: None,
+        jwt_secret: "test-secret".to_string(),
+    };
+
+    TestServer::new(build_router(state)).unwrap()
+}
+
+async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> TestServer {
+    let db = make_db().await;
+
+    let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
+    let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
+    let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
+    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let state = AppState {
+        user_repo,
+        login_attempt_repo,
+        token_repo,
+        work_repo,
+        message_publisher: Some(Arc::new(NoopPublisher)),
+        open_library_client: Some(Arc::new(MockOpenLibraryClient { result: ol_result })),
         jwt_secret: "test-secret".to_string(),
     };
 
@@ -200,4 +239,95 @@ async fn post_works_without_nats_returns_500() {
     retry.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
     let retry_body: Value = retry.json();
     assert_eq!(retry_body["error"], "messaging_unavailable");
+}
+
+// Valid title → 202 with work_id and status=pending
+#[tokio::test]
+async fn post_works_valid_title_returns_202() {
+    let mock_book = OpenLibraryBook {
+        open_library_id: "/works/OL123W".to_string(),
+        title: "Clean Code".to_string(),
+        author: "Robert C. Martin".to_string(),
+    };
+    let server = make_test_server_with_mock_ol(Some(mock_book)).await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "Clean Code", "identifier_type": "title"}))
+        .await;
+
+    resp.assert_status(StatusCode::ACCEPTED);
+    let body: Value = resp.json();
+    assert!(body["work_id"].is_string());
+    assert_eq!(body["status"], "pending");
+}
+
+// Title not found in Open Library → 422 title_not_found
+#[tokio::test]
+async fn post_works_title_not_found_returns_422() {
+    let server = make_test_server_with_mock_ol(None).await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "Nonexistent Book Title XYZ", "identifier_type": "title"}))
+        .await;
+
+    resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "title_not_found");
+}
+
+// Duplicate open_library_id → 409
+#[tokio::test]
+async fn post_works_duplicate_open_library_id_returns_409() {
+    let mock_book = OpenLibraryBook {
+        open_library_id: "/works/OL456W".to_string(),
+        title: "The Pragmatic Programmer".to_string(),
+        author: "David Thomas".to_string(),
+    };
+    let server = make_test_server_with_mock_ol(Some(mock_book)).await;
+    let jwt = setup_and_login(&server).await;
+
+    let first = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "The Pragmatic Programmer", "identifier_type": "title"}))
+        .await;
+    first.assert_status(StatusCode::ACCEPTED);
+    let first_id = first.json::<Value>()["work_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "The Pragmatic Programmer", "identifier_type": "title"}))
+        .await;
+
+    resp.assert_status(StatusCode::CONFLICT);
+    let body: Value = resp.json();
+    assert_eq!(body["work_id"], first_id);
+    assert_eq!(body["error"], "duplicate");
+}
+
+// Unknown identifier_type → 422
+#[tokio::test]
+async fn post_works_unknown_identifier_type_returns_422() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "some-value", "identifier_type": "barcode"}))
+        .await;
+
+    resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "invalid_identifier_type");
 }
