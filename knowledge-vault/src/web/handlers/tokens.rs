@@ -55,6 +55,17 @@ pub async fn post_token(
         )
             .into_response();
     }
+    if name.len() > 256 {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ErrorResponse {
+                error: "invalid_input".into(),
+                message: "Token name must not exceed 256 characters".into(),
+                status: 422,
+            }),
+        )
+            .into_response();
+    }
 
     let token = generate_pat();
     let hash = hash_pat(&token);

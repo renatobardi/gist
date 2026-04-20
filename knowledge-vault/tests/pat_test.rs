@@ -172,6 +172,35 @@ async fn pat_authenticates_successfully() {
     assert!(resp.json::<Value>()["token"].as_str().unwrap().starts_with("ens_"));
 }
 
+// Revoked PAT is rejected with 401 on subsequent use
+#[tokio::test]
+async fn revoked_pat_is_rejected() {
+    let server = make_test_server().await;
+    let jwt = setup_and_login(&server).await;
+
+    let create_resp = server
+        .post("/api/tokens")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"name": "short-lived"}))
+        .await;
+    create_resp.assert_status(StatusCode::CREATED);
+    let body: Value = create_resp.json();
+    let pat = body["token"].as_str().unwrap().to_string();
+    let token_id = body["token_id"].as_str().unwrap().to_string();
+
+    server
+        .delete(&format!("/api/tokens/{token_id}"))
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await
+        .assert_status(StatusCode::NO_CONTENT);
+
+    let resp = server
+        .get("/api/tokens")
+        .add_header("Authorization", format!("Bearer {pat}"))
+        .await;
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
 // POST /api/tokens with empty name returns 422
 #[tokio::test]
 async fn create_token_with_empty_name_returns_422() {
