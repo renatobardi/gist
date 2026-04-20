@@ -28,6 +28,7 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Design artifacts published in `_bmad/docs/design/` directory
 
 ### Documentation
+- Added Design section to README with references to all design artifacts
 - Added API Reference section to README with authentication endpoints and security details
 - Documented environment variable requirements: KV_JWT_SECRET, KV_GEMINI_API_KEY, KV_DATA_DIR, KV_PORT
 - Documented login endpoint request/response formats, rate limiting behavior, and password requirements

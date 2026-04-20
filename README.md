@@ -334,13 +334,15 @@ pub struct Pat {
 
 **Check first-run status**
 ```
-GET /setup
+GET /api/setup
 Response: 200 {first_run: bool}
 ```
 
+> Note: `GET /setup` (no `/api/` prefix) serves the browser HTML setup page and redirects to `/login` if already configured.
+
 **Create admin account (first-run only)**
 ```
-POST /setup
+POST /api/setup
 Content-Type: application/json
 
 {
@@ -351,6 +353,8 @@ Content-Type: application/json
 Response: 201 {user_id: "..."}
 Error: 409 (already configured), 422 (validation error)
 ```
+
+> Note: `POST /setup` (no `/api/` prefix) accepts `application/x-www-form-urlencoded` and is used by the browser form.
 
 **Login with email and password**
 ```
@@ -379,6 +383,7 @@ Error: 401 (invalid credentials), 429 (rate limited)
   - `HttpOnly`: Prevents JavaScript access (mitigates XSS)
   - `Secure`: Only transmitted over HTTPS
   - `SameSite=Strict`: CSRF protection
+  - `Path=/`: Cookie sent for all paths
 - **Password Requirements**: Minimum 12 characters
 - **Password Hashing**: Argon2id (OWASP 2026 parameters: m=65536, t=3, p=1)
 
