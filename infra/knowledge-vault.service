@@ -3,6 +3,8 @@ Description=Knowledge Vault - Intelligent Book Graph Discovery Service
 Documentation=https://github.com/renatobardi/gist/blob/main/infra/README.md
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -38,10 +40,6 @@ EnvironmentFile=-/etc/knowledge-vault/config.env
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=knowledge-vault
-
-# Restart limits
-StartLimitInterval=60
-StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target

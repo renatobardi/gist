@@ -332,7 +332,9 @@ If port 8080 is in use:
 # Find the process using port 8080
 sudo lsof -i :8080
 
-# Kill the process
+# Send SIGTERM for graceful shutdown first
+sudo kill <PID>
+# If process doesn't exit within a few seconds, force-kill
 sudo kill -9 <PID>
 
 # Or change KV_PORT in /etc/knowledge-vault/env and restart
@@ -368,7 +370,7 @@ To integrate with a monitoring system (Prometheus, Grafana, etc.):
 - [ ] Binary is executable: `ls -la /usr/local/bin/knowledge-vault`
 - [ ] Service user exists: `id knowledge-vault`
 - [ ] Data directory is writable: `ls -la /var/lib/knowledge-vault`
-- [ ] Environment variables are set: `sudo systemctl show-environment -u knowledge-vault`
+- [ ] Environment variables are set: `sudo cat /etc/knowledge-vault/env`
 
 ## References
 - [systemd.service manual](https://man7.org/linux/man-pages/man5/systemd.service.5.html)
