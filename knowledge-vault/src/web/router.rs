@@ -6,6 +6,7 @@ use tower::ServiceBuilder;
 
 use super::{
     handlers::{
+        add_book::get_add_book,
         auth::post_login,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
@@ -29,6 +30,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/works/{id}", get(get_work_by_id))
         .route("/api/works/{id}/retry", post(post_works_retry))
         .route("/ws", get(ws_handler))
+        .route("/add", get(get_add_book))
         .route("/", get(root_redirect))
         .with_state(state)
         .layer(
