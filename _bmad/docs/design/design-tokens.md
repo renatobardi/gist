@@ -16,16 +16,16 @@ This document defines the framework-agnostic design tokens for Knowledge Vault, 
 | `color-text-primary` | `#262626` | Near-black. Main body text. |
 | `color-text-secondary` | `#666666` | Secondary text, labels, metadata. |
 | `color-bg-main` | `#ffffff` | Main application background. |
+| `color-bg-subtle` | `#f9f9f9` | Subtle hover background for cards and ghost buttons. |
 | `color-bg-dark` | `#1a1a1a` | Hero sections, dark headers. |
 | `color-border` | `#e5e5e5` | Subtle borders for cards and dividers. |
 
 ### Semantic
 | Token | Value | Description |
 |-------|-------|-------------|
-| `color-success` | `#28a745` | Success status, active badges. |
-| `color-error` | `#dc3545` | Error messages, failed status. |
-| `color-warning` | `#ffc107` | Warnings, pending states. |
-| `color-info` | `#17a2b8` | Informational badges. |
+| `color-success` | `#28a745` | Success status, Done badges. |
+| `color-error` | `#dc3545` | Error messages, Failed badges. |
+| `color-warning` | `#ffc107` | Warnings, Pending badges. |
 
 ## 2. Typography
 

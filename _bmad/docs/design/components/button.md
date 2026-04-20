@@ -24,7 +24,7 @@ Primary action component following the BMW design system.
 - **Background:** Transparent.
 - **Text:** `color-text-primary`.
 - **Border:** None.
-- **Hover:** Light gray background (`#f0f0f0`).
+- **Hover:** `color-bg-subtle` background.
 
 ## States
 

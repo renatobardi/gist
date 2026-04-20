@@ -28,6 +28,7 @@ graph TD
 - **Nodes:** Rectangular (`shape: rectangle`), color-coded by domain.
 - **Zoom/Pan:** Standard mouse/touch controls.
 - **Hover Node:** Highlight node and connected edges. Show name if zoomed out.
+- **Selected Node:** `color-brand-blue` (`#1c69d4`) border (2px), persists until another node is clicked or canvas is clicked.
 - **Hover Edge:** Show relation type (e.g., "extends") and strength (0.0 - 1.0).
 
 ### Domain Filter

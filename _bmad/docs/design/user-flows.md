@@ -19,7 +19,7 @@ This document maps the critical user journeys for Knowledge Vault.
 | Step | User Action | System Response | Next State |
 |------|-------------|-----------------|------------|
 | 1 | Click "Add Book" on `/` | Opens submission form. | Modal/Inline Form |
-| 2 | Enter ISBN and submit | API returns 202; NATS event published. | Library View |
+| 2 | Enter ISBN or title and submit | API returns 202; NATS event published. | Library View |
 | 3 | Wait for processing | WS pushes status updates: `pending` → `processing` → `done`. | Library View (Reactive) |
 | 4 | Click on book card | Navigate to detail view. | `/works/{id}` |
 | 5 | View summary & concepts | Displays Gemini-extracted insights. | Detail View |
