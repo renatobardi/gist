@@ -1,3 +1,5 @@
+use crate::domain::concept::Concept;
+use crate::domain::insight::{GeminiConcept, Insight};
 use crate::domain::user::{PersonalAccessToken, User};
 use crate::domain::work::Work;
 
@@ -42,6 +44,49 @@ pub trait TokenRepo: Send + Sync {
 pub trait WorkRepo: Send + Sync {
     async fn find_by_isbn(&self, isbn: &str) -> Result<Option<Work>, RepoError>;
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError>;
+    async fn update_status(
+        &self,
+        work_id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError>;
+    async fn update_metadata(
+        &self,
+        work_id: &str,
+        title: &str,
+        author: &str,
+        open_library_id: Option<&str>,
+    ) -> Result<(), RepoError>;
+}
+
+pub struct ConceptEdge {
+    pub from_name: String,
+    pub to_name: String,
+    pub relation_type: String,
+    pub strength: f64,
+}
+
+#[async_trait::async_trait]
+pub trait ConceptRepo: Send + Sync {
+    async fn upsert(&self, concept: &GeminiConcept) -> Result<Concept, RepoError>;
+    async fn create_relacionado_a(&self, edge: ConceptEdge) -> Result<(), RepoError>;
+}
+
+#[async_trait::async_trait]
+pub trait InsightRepo: Send + Sync {
+    async fn create(
+        &self,
+        work_id: &str,
+        summary: &str,
+        key_points: &[String],
+        raw_gemini_response: &str,
+    ) -> Result<Insight, RepoError>;
+    async fn create_menciona(
+        &self,
+        insight_id: &str,
+        concept_id: &str,
+        relevance_weight: f64,
+    ) -> Result<(), RepoError>;
 }
 
 #[async_trait::async_trait]

@@ -1,4 +1,4 @@
-use knowledge_vault::{adapters, web};
+use knowledge_vault::{adapters, app, web};
 
 use std::sync::Arc;
 
@@ -7,12 +7,20 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use adapters::{
+    gemini::GeminiAdapter,
     nats::publisher::NatsPublisher,
+    openlib::OpenLibraryAdapter,
     surreal::{
-        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
-        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
+        concept_repo::SurrealConceptRepo,
+        insight_repo::SurrealInsightRepo,
+        login_attempt_repo::SurrealLoginAttemptRepo,
+        schema::run_migrations,
+        token_repo::SurrealTokenRepo,
+        user_repo::SurrealUserRepo,
+        work_repo::SurrealWorkRepo,
     },
 };
+use app::worker::WorkerService;
 use web::{router::build_router, state::AppState};
 
 #[tokio::main]
@@ -40,22 +48,53 @@ async fn main() -> anyhow::Result<()> {
 
     let nats_url =
         std::env::var("KV_NATS_URL").unwrap_or_else(|_| "nats://127.0.0.1:4222".to_string());
+
+    let nats_client = match async_nats::connect(&nats_url).await {
+        Ok(client) => {
+            info!("Connected to NATS at {nats_url}");
+            Some(client)
+        }
+        Err(e) => {
+            tracing::warn!("NATS unavailable — POST /api/works will return 500: {e}");
+            None
+        }
+    };
+
     let message_publisher: Option<Arc<dyn knowledge_vault::ports::messaging::MessagePublisher>> =
-        match async_nats::connect(&nats_url).await {
-            Ok(client) => {
-                info!("Connected to NATS at {nats_url}");
-                Some(Arc::new(NatsPublisher::new(client)))
+        nats_client
+            .as_ref()
+            .map(|c| Arc::new(NatsPublisher::new(c.clone())) as Arc<_>);
+
+    let work_repo: Arc<SurrealWorkRepo> = Arc::new(SurrealWorkRepo::new(db.clone()));
+    let concept_repo: Arc<SurrealConceptRepo> = Arc::new(SurrealConceptRepo::new(db.clone()));
+    let insight_repo: Arc<SurrealInsightRepo> = Arc::new(SurrealInsightRepo::new(db.clone()));
+
+    // Start worker if NATS and Gemini API key are available
+    if let Some(nats) = nats_client {
+        match std::env::var("KV_GEMINI_API_KEY") {
+            Ok(api_key) => {
+                let gemini = Arc::new(GeminiAdapter::new(api_key));
+                let open_library = Arc::new(OpenLibraryAdapter::new());
+                let worker = WorkerService::new(
+                    nats,
+                    open_library,
+                    gemini,
+                    work_repo.clone(),
+                    concept_repo,
+                    insight_repo,
+                );
+                worker.start().await;
+                info!("Discovery worker started");
             }
-            Err(e) => {
-                tracing::warn!("NATS unavailable — POST /api/works will return 500: {e}");
-                None
+            Err(_) => {
+                tracing::warn!("KV_GEMINI_API_KEY not set — discovery worker disabled");
             }
-        };
+        }
+    }
 
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
-    let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
-    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let token_repo = Arc::new(SurrealTokenRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,

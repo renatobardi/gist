@@ -1,3 +1,5 @@
+pub mod concept_repo;
+pub mod insight_repo;
 pub mod login_attempt_repo;
 pub mod schema;
 pub mod token_repo;

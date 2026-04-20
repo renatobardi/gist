@@ -53,6 +53,40 @@ impl WorkRepo for SurrealWorkRepo {
         }))
     }
 
+    async fn update_status(
+        &self,
+        work_id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError> {
+        self.db
+            .query("UPDATE type::thing('work', $id) SET status = $status, error_msg = $error_msg, updated_at = time::now()")
+            .bind(("id", work_id.to_string()))
+            .bind(("status", status.to_string()))
+            .bind(("error_msg", error_msg.map(|s| s.to_string())))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn update_metadata(
+        &self,
+        work_id: &str,
+        title: &str,
+        author: &str,
+        open_library_id: Option<&str>,
+    ) -> Result<(), RepoError> {
+        self.db
+            .query("UPDATE type::thing('work', $id) SET title = $title, author = $author, open_library_id = $ol_id, updated_at = time::now()")
+            .bind(("id", work_id.to_string()))
+            .bind(("title", title.to_string()))
+            .bind(("author", author.to_string()))
+            .bind(("ol_id", open_library_id.map(|s| s.to_string())))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError> {
         let work_id = Uuid::new_v4().to_string();
 
