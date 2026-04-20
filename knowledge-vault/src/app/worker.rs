@@ -42,6 +42,22 @@ mod tests {
     }
 
     #[test]
+    fn service_unavailable_is_classified_as_transient() {
+        assert_eq!(
+            classify_error("service unavailable: upstream not ready"),
+            WorkerError::Transient("service unavailable: upstream not ready".into())
+        );
+    }
+
+    #[test]
+    fn too_many_requests_is_classified_as_transient() {
+        assert_eq!(
+            classify_error("too many requests: quota exceeded"),
+            WorkerError::Transient("too many requests: quota exceeded".into())
+        );
+    }
+
+    #[test]
     fn schema_violation_is_classified_as_permanent() {
         assert_eq!(
             classify_error("missing required field: name"),

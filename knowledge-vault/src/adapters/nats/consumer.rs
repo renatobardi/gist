@@ -63,8 +63,8 @@ impl NatsConsumer {
                     );
                     msg.ack_with(AckKind::Term).await.ok();
                 }
-                Err(WorkerError::Transient(ref e)) => {
-                    if should_retry(delivered, &WorkerError::Transient(e.clone())) {
+                Err(ref err @ WorkerError::Transient(ref e)) => {
+                    if should_retry(delivered, err) {
                         let delay = backoff_delay(delivered);
                         warn!(
                             error = %e,
