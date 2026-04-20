@@ -1,0 +1,13 @@
+title = "Gitleaks Config for Knowledge Vault"
+description = "Configuration for detecting secrets including ens_ prefixed PAT tokens"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "knowledge-vault-ens-pat"
+description = "Knowledge Vault ENS Prefix Personal Access Token"
+regex = '''ens_[a-zA-Z0-9]{32}'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["ens_", "pat", "token", "secret"]
