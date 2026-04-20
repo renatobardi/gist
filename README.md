@@ -10,6 +10,15 @@ Build a Personal Knowledge Vault — a unified binary application that:
 - Stores and visualizes knowledge as interconnected graphs
 - Runs as a single, zero-dependency binary on resource-constrained environments
 
+## 🎨 Design
+
+Complete UX design artifacts following the BMW design system:
+- **Design Tokens**: [26 core tokens](_bmad/docs/design/design-tokens.md) (colors, typography, spacing)
+- **Component Specifications**: [Button, Card, Form Field, Status Badge](_bmad/docs/design/components/) with WCAG 2.1 AA accessibility
+- **User Flows & Information Architecture**: [6-page information architecture](_bmad/docs/design/ia.md) (setup, login, library, detail, graph, concept-detail)
+- **Wireframes**: [Interactive wireframes](_bmad/docs/design/wireframes/) for all pages
+- **Interaction Patterns**: [Real-time updates, validation, loading states](_bmad/docs/design/interactions.md)
+
 ## 🏗️ Technical Stack
 
 ### Core Components
