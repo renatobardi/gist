@@ -320,6 +320,75 @@ pub struct Pat {
 }
 ```
 
+## 🔑 API Reference
+
+### Environment Variables
+| Variable | Description | Required | Default | Example |
+|----------|-------------|----------|---------|---------|
+| `KV_JWT_SECRET` | 32+ character secret for HS256 JWT signing | Yes | — | `your-secret-key-here-min-32-chars` |
+| `KV_GEMINI_API_KEY` | Google Gemini API key for concept extraction | Yes | — | `AIzaSyD...` |
+| `KV_DATA_DIR` | Directory for SurrealDB and NATS storage | No | `./data` | `/var/lib/knowledge-vault` |
+| `KV_PORT` | HTTP server port | No | `8080` | `3000` |
+
+### Setup & Authentication Endpoints
+
+**Check first-run status**
+```
+GET /setup
+Response: 200 {first_run: bool}
+```
+
+**Create admin account (first-run only)**
+```
+POST /setup
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-12+-character-password"
+}
+
+Response: 201 {user_id: "..."}
+Error: 409 (already configured), 422 (validation error)
+```
+
+**Login with email and password**
+```
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-12+-character-password"
+}
+
+Response: 200
+Set-Cookie: session=<JWT>; HttpOnly; Secure; SameSite=Strict
+{
+  "token": "<JWT token>"
+}
+
+Error: 401 (invalid credentials), 429 (rate limited)
+```
+
+#### Login Details
+- **Rate Limiting**: Maximum 3 failed attempts per email in a 5-minute window
+- **Rate Limit Response**: `429 Too Many Requests` with `retry_after_seconds` field
+- **Token Expiry**: 24 hours from issuance
+- **Cookie Attributes**:
+  - `HttpOnly`: Prevents JavaScript access (mitigates XSS)
+  - `Secure`: Only transmitted over HTTPS
+  - `SameSite=Strict`: CSRF protection
+- **Password Requirements**: Minimum 12 characters
+- **Password Hashing**: Argon2id (OWASP 2026 parameters: m=65536, t=3, p=1)
+
+### Security Headers
+All responses include the following security headers:
+- `X-Content-Type-Options: nosniff` — Prevents MIME type sniffing
+- `X-Frame-Options: DENY` — Prevents clickjacking
+- `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'` — Restricts resource loading
+- `Referrer-Policy: strict-origin-when-cross-origin` — Controls referrer information
+
 ## 📦 Deployment
 
 ### Single Binary Output
