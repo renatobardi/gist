@@ -1,5 +1,8 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use email_address::EmailAddress;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -30,6 +33,26 @@ impl std::fmt::Display for ValidationError {
             ValidationError::InvalidEmail(msg) => write!(f, "Invalid email: {msg}"),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersonalAccessToken {
+    pub id: String,
+    pub user_id: String,
+    pub name: String,
+    pub created_at: String,
+    pub revoked_at: Option<String>,
+}
+
+/// Generates a new PAT: `ens_` prefix followed by 32 random bytes, base64url-encoded.
+pub fn generate_pat() -> String {
+    let bytes: [u8; 32] = rand::thread_rng().gen();
+    format!("ens_{}", URL_SAFE_NO_PAD.encode(bytes))
+}
+
+/// Hashes a PAT using SHA-256 for storage. High-entropy tokens do not require slow hashing.
+pub fn hash_pat(token: &str) -> String {
+    hex::encode(Sha256::digest(token.as_bytes()))
 }
 
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
@@ -95,5 +118,29 @@ mod tests {
     #[test]
     fn valid_email_with_subdomain_is_accepted() {
         assert!(validate_email("admin@mail.example.org").is_ok());
+    }
+
+    #[test]
+    fn generate_pat_has_ens_prefix() {
+        let token = generate_pat();
+        assert!(token.starts_with("ens_"), "PAT must start with ens_");
+    }
+
+    #[test]
+    fn generate_pat_produces_unique_tokens() {
+        let a = generate_pat();
+        let b = generate_pat();
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn hash_pat_is_deterministic() {
+        let token = "ens_testtoken";
+        assert_eq!(hash_pat(token), hash_pat(token));
+    }
+
+    #[test]
+    fn hash_pat_differs_for_different_tokens() {
+        assert_ne!(hash_pat("ens_aaa"), hash_pat("ens_bbb"));
     }
 }

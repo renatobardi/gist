@@ -11,6 +11,14 @@ DEFINE FIELD IF NOT EXISTS email        ON login_attempts TYPE string;
 DEFINE FIELD IF NOT EXISTS succeeded    ON login_attempts TYPE bool;
 DEFINE FIELD IF NOT EXISTS attempted_at ON login_attempts TYPE datetime DEFAULT time::now();
 DEFINE INDEX IF NOT EXISTS login_attempts_email_time ON login_attempts COLUMNS email, attempted_at;
+
+DEFINE TABLE IF NOT EXISTS personal_access_tokens SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS user_id    ON personal_access_tokens TYPE string;
+DEFINE FIELD IF NOT EXISTS name       ON personal_access_tokens TYPE string;
+DEFINE FIELD IF NOT EXISTS token_hash ON personal_access_tokens TYPE string;
+DEFINE FIELD IF NOT EXISTS created_at ON personal_access_tokens TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS revoked_at ON personal_access_tokens TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS pat_token_hash ON personal_access_tokens COLUMNS token_hash UNIQUE;
 "#;
 
 pub async fn run_migrations(db: &surrealdb::Surreal<surrealdb::engine::local::Db>) -> Result<(), surrealdb::Error> {

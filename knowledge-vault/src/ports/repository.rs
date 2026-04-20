@@ -1,4 +1,4 @@
-use crate::domain::user::User;
+use crate::domain::user::{PersonalAccessToken, User};
 
 #[derive(Debug)]
 pub enum RepoError {
@@ -22,6 +22,14 @@ pub trait UserRepo: Send + Sync {
     async fn count(&self) -> Result<u64, RepoError>;
     async fn create(&self, email: String, password_hash: String) -> Result<User, RepoError>;
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepoError>;
+}
+
+#[async_trait::async_trait]
+pub trait TokenRepo: Send + Sync {
+    async fn create(&self, user_id: &str, name: String, token_hash: String) -> Result<String, RepoError>;
+    async fn list(&self, user_id: &str) -> Result<Vec<PersonalAccessToken>, RepoError>;
+    async fn find_by_hash(&self, token_hash: &str) -> Result<Option<PersonalAccessToken>, RepoError>;
+    async fn revoke(&self, token_id: &str, user_id: &str) -> Result<(), RepoError>;
 }
 
 #[async_trait::async_trait]
