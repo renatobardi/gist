@@ -50,6 +50,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
       - name: Run cargo audit
         working-directory: knowledge-vault
         run: cargo audit --deny warnings
@@ -57,6 +62,9 @@ jobs:
   secret-scanning:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:

@@ -8,6 +8,5 @@ useDefault = true
 id = "knowledge-vault-ens-pat"
 description = "Knowledge Vault ENS Prefix Personal Access Token"
 regex = '''ens_[a-zA-Z0-9]{32}'''
-secretGroup = 1
 entropy = 3.5
 keywords = ["ens_", "pat", "token", "secret"]
