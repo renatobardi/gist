@@ -720,6 +720,25 @@ This slice proves: auth middleware, SurrealDB writes, NATS self-extracting binar
 
 ---
 
+## 8. Design System & Components
+
+All frontend components follow the BMW design system with WCAG 2.1 AA accessibility compliance:
+
+**Design Artifacts** (see [_bmad/docs/design/](./_design/)):
+- [Design Tokens](./design/design-tokens.md): 26 core tokens (colors, typography, spacing)
+- [Components](./design/components/): Button, Card, Form Field, Status Badge
+- [Information Architecture](./design/ia.md): 6-page user flow layout
+- [Interaction Patterns](./design/interactions.md): Real-time updates, validation, graph interactions
+- [Wireframes](./design/wireframes/): Setup, login, library, detail, graph, concept-detail pages
+
+**Implementation Notes:**
+- Status badges use BMW color scheme: blue for processing, green for done, red for failed
+- Interactive focus ring: BMW Focus Blue (#0653b6), minimum 3px width
+- Graph nodes: rectangular (0px border-radius), orthogonal edge routing
+- Form validation: client-side with server confirmation
+
+---
+
 ## 9. Decisions Log
 
 ### ADR-01: Modular Monolith over Microservices
