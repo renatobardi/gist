@@ -38,6 +38,15 @@ impl OpenLibraryPort for MockOpenLibraryClient {
     }
 }
 
+struct ErrorOpenLibraryClient;
+
+#[async_trait]
+impl OpenLibraryPort for ErrorOpenLibraryClient {
+    async fn search_by_title(&self, _title: &str) -> Result<Option<OpenLibraryBook>, String> {
+        Err("Open Library returned status 503 Service Unavailable".to_string())
+    }
+}
+
 async fn make_db() -> surrealdb::Surreal<surrealdb::engine::local::Db> {
     let db: Surreal<surrealdb::engine::local::Db> = Surreal::new::<Mem>(()).await.unwrap();
     db.use_ns("kv_test").use_db("kv_test").await.unwrap();
@@ -330,4 +339,62 @@ async fn post_works_unknown_identifier_type_returns_422() {
     resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
     let body: Value = resp.json();
     assert_eq!(body["error"], "invalid_identifier_type");
+}
+
+// Empty title → 422 invalid_title
+#[tokio::test]
+async fn post_works_empty_title_returns_422() {
+    let server = make_test_server_with_mock_ol(None).await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "   ", "identifier_type": "title"}))
+        .await;
+
+    resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "invalid_title");
+}
+
+// Open Library service failure → 500 internal_error
+#[tokio::test]
+async fn post_works_open_library_error_returns_500() {
+    let db = {
+        let db: surrealdb::Surreal<surrealdb::engine::local::Db> =
+            surrealdb::Surreal::new::<surrealdb::engine::local::Mem>(())
+                .await
+                .unwrap();
+        db.use_ns("kv_test").use_db("kv_test").await.unwrap();
+        knowledge_vault::adapters::surreal::schema::run_migrations(&db)
+            .await
+            .unwrap();
+        db
+    };
+    let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
+    let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
+    let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
+    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let state = AppState {
+        user_repo,
+        login_attempt_repo,
+        token_repo,
+        work_repo,
+        message_publisher: Some(Arc::new(NoopPublisher)),
+        open_library_client: Some(Arc::new(ErrorOpenLibraryClient)),
+        jwt_secret: "test-secret".to_string(),
+    };
+    let server = TestServer::new(build_router(state)).unwrap();
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "Clean Code", "identifier_type": "title"}))
+        .await;
+
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "internal_error");
 }

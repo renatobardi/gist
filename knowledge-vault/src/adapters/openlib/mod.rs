@@ -57,6 +57,10 @@ impl OpenLibraryPort for OpenLibraryClient {
             .await
             .map_err(|e| e.to_string())?;
 
+        if !resp.status().is_success() {
+            return Err(format!("Open Library returned status {}", resp.status()));
+        }
+
         let search: SearchResponse = resp.json().await.map_err(|e| e.to_string())?;
 
         if search.num_found == 0 || search.docs.is_empty() {

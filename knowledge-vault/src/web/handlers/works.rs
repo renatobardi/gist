@@ -230,6 +230,15 @@ async fn handle_title(state: AppState, title: String) -> Response {
     {
         Ok(w) => w,
         Err(e) => {
+            // A concurrent request may have won the race and hit the unique index.
+            if let Ok(Some(existing)) = state.work_repo.find_by_open_library_id(&book.open_library_id).await {
+                info!(ol_id = %book.open_library_id, existing_work_id = %existing.id, "duplicate open_library_id detected on race, returning 409");
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({ "work_id": existing.id, "error": "duplicate" })),
+                )
+                    .into_response();
+            }
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "internal_error", "message": e.to_string() })),
