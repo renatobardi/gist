@@ -174,7 +174,7 @@ async fn post_works_isbn_with_hyphens_is_accepted() {
     resp.assert_status(StatusCode::ACCEPTED);
 }
 
-// NATS unavailable → 500
+// NATS unavailable → 500, and no work record is persisted
 #[tokio::test]
 async fn post_works_without_nats_returns_500() {
     let server = make_test_server_no_nats().await;
@@ -189,4 +189,15 @@ async fn post_works_without_nats_returns_500() {
     resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
     let body: Value = resp.json();
     assert_eq!(body["error"], "messaging_unavailable");
+
+    // Verify no work record was created: a retry must still return
+    // messaging_unavailable (500), not duplicate (409).
+    let retry = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
+        .await;
+    retry.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+    let retry_body: Value = retry.json();
+    assert_eq!(retry_body["error"], "messaging_unavailable");
 }

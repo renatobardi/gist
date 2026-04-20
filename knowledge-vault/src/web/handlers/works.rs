@@ -77,17 +77,8 @@ pub async fn post_works(
         }
     }
 
-    let work = match state.work_repo.create_work(&isbn).await {
-        Ok(w) => w,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "internal_error", "message": e.to_string() })),
-            )
-                .into_response();
-        }
-    };
-
+    // Check publisher before creating work so a missing NATS connection never
+    // leaves an orphaned record that blocks future submissions of the same ISBN.
     let publisher = match &state.message_publisher {
         Some(p) => p,
         None => {
@@ -97,6 +88,27 @@ pub async fn post_works(
                     "error": "messaging_unavailable",
                     "message": "NATS publisher is not initialised"
                 })),
+            )
+                .into_response();
+        }
+    };
+
+    let work = match state.work_repo.create_work(&isbn).await {
+        Ok(w) => w,
+        Err(e) => {
+            // A concurrent request may have won the race and hit the unique index.
+            // Re-check so we return 409 instead of a misleading 500.
+            if let Ok(Some(existing)) = state.work_repo.find_by_isbn(&isbn).await {
+                info!(isbn = %isbn, existing_work_id = %existing.id, "duplicate ISBN detected on race, returning 409");
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({ "work_id": existing.id, "error": "duplicate" })),
+                )
+                    .into_response();
+            }
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal_error", "message": e.to_string() })),
             )
                 .into_response();
         }
