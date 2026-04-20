@@ -301,24 +301,64 @@ pub async fn publish_with_retry(
 - **Storage**: Httponly Cookie (Frontend managed by Leptos)
 
 ### Personal Access Tokens (PAT)
-- **Format**: `ens_<random_128bit_base64>`
-- **Storage**: Hashed in SurrealDB with rotation metadata
-- **Usage**: Service-to-service, batch operations
+- **Format**: `ens_<random_32byte_base64url>`
+- **Storage**: Hashed with Argon2id in SurrealDB
+- **Usage**: Service-to-service, batch operations, CI/CD automation
+- **Security**: Raw token shown only once at creation; never exposed in list operations
 
-```rust
-pub struct PatRequest {
-    name: String,
-    expiry: Option<DateTime<Utc>>,
+#### PAT Endpoints
+
+**Create a PAT**
+```
+POST /api/tokens
+Authorization: Bearer <JWT or PAT>
+Content-Type: application/json
+
+{
+  "name": "ci-deployment-token"
 }
 
-pub struct Pat {
-    id: String,
-    prefix: String, // "ens_"
-    hash: String,   // SHA256(token)
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
+Response: 201
+{
+  "token_id": "...",
+  "token": "ens_...",
+  "name": "ci-deployment-token"
 }
 ```
+
+⚠️ Token shown only once. Store securely.
+
+**List PATs**
+```
+GET /api/tokens
+Authorization: Bearer <JWT or PAT>
+
+Response: 200
+[
+  {
+    "token_id": "...",
+    "name": "ci-deployment-token",
+    "created_at": "2026-04-20T18:42:47Z"
+  }
+]
+```
+
+Note: Raw token never returned in list.
+
+**Revoke a PAT**
+```
+DELETE /api/tokens/{token_id}
+Authorization: Bearer <JWT or PAT>
+
+Response: 204 No Content
+```
+
+Revoked tokens are immediately rejected with 401 on subsequent use.
+
+#### Documentation
+
+- [PAT API Reference](/_bmad/docs/api-pat.md) — Complete API documentation with all endpoints and error codes
+- [PAT User Guide](/_bmad/docs/pat-user-guide.md) — How to generate, manage, and use PATs with code examples and security best practices
 
 ## 🔑 API Reference
 
@@ -386,6 +426,72 @@ Error: 401 (invalid credentials), 429 (rate limited)
   - `Path=/`: Cookie sent for all paths
 - **Password Requirements**: Minimum 12 characters
 - **Password Hashing**: Argon2id (OWASP 2026 parameters: m=65536, t=3, p=1)
+
+### Personal Access Token (PAT) Endpoints
+
+PATs are used identically to JWT tokens — pass them as Bearer tokens in the Authorization header.
+
+**Create a PAT**
+```
+POST /api/tokens
+Authorization: Bearer <JWT or PAT>
+Content-Type: application/json
+
+{
+  "name": "ci-deployment-token"
+}
+
+Response: 201 Created
+{
+  "token_id": "<UUID>",
+  "token": "ens_<32-bytes-base64url>",
+  "name": "ci-deployment-token"
+}
+
+Error: 401 (unauthorized), 422 (invalid input: empty name or name > 256 chars)
+```
+
+⚠️ **Important**: The raw token is shown only once. Store it securely immediately after creation.
+
+**List PATs**
+```
+GET /api/tokens
+Authorization: Bearer <JWT or PAT>
+
+Response: 200 OK
+[
+  {
+    "token_id": "<UUID>",
+    "name": "ci-deployment-token",
+    "created_at": "2026-04-20T18:42:47Z"
+  }
+]
+
+Error: 401 (unauthorized)
+```
+
+Note: The raw token value is never returned in list operations.
+
+**Revoke a PAT**
+```
+DELETE /api/tokens/{token_id}
+Authorization: Bearer <JWT or PAT>
+
+Response: 204 No Content
+
+Error: 401 (unauthorized), 404 (token not found)
+```
+
+Revoked tokens are immediately rejected with 401 on subsequent requests.
+
+#### PAT Details
+- **Format**: `ens_` prefix followed by 32 random bytes (base64url-encoded)
+- **Storage**: Hashed with Argon2id (OWASP recommended parameters: m=19456, t=2, p=1)
+- **Display**: Shown only once at creation time; never returned in list operations
+- **Permissions**: Inherits all permissions from the user who created it
+- **Usage**: Ideal for CI/CD, batch operations, and service-to-service communication
+
+See [PAT API Reference](/_bmad/docs/api-pat.md) and [PAT User Guide](/_bmad/docs/pat-user-guide.md) for detailed documentation.
 
 ### Security Headers
 All responses include the following security headers:
