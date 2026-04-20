@@ -65,6 +65,7 @@ async fn login_with_valid_credentials_returns_200_with_token() {
     let cookie_str = cookie.to_str().unwrap();
     assert!(cookie_str.contains("session="), "cookie must contain session=");
     assert!(cookie_str.to_lowercase().contains("httponly"), "cookie must be HttpOnly");
+    assert!(cookie_str.to_lowercase().contains("secure"), "cookie must be Secure");
     assert!(cookie_str.to_lowercase().contains("samesite=strict"), "cookie must be SameSite=Strict");
 }
 

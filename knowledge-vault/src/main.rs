@@ -23,8 +23,10 @@ async fn main() -> anyhow::Result<()> {
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(8080);
-    let jwt_secret = std::env::var("KV_JWT_SECRET")
-        .unwrap_or_else(|_| "dev-secret-change-in-production".to_string());
+    let jwt_secret = std::env::var("KV_JWT_SECRET").unwrap_or_else(|_| {
+        tracing::warn!("KV_JWT_SECRET is not set — using insecure default. Set this variable in production.");
+        "dev-secret-change-in-production".to_string()
+    });
 
     let db = open_db(&data_dir).await?;
     run_migrations(&db).await?;

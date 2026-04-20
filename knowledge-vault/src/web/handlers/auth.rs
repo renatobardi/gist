@@ -40,7 +40,9 @@ pub struct RateLimitResponse {
 pub async fn post_login(State(state): State<AppState>, Json(input): Json<LoginInput>) -> Response {
     let email = input.email.trim().to_lowercase();
 
-    // Check rate limit: 3 failures in 5 minutes
+    // Check rate limit: 3 failures in 5 minutes.
+    // Note: count-then-record is non-atomic; under high concurrency a burst of concurrent
+    // requests at exactly N-1 failures could each pass the check. Acceptable for single-server MVP.
     let failure_count = match state
         .login_attempt_repo
         .count_recent_failures(&email, LOCKOUT_WINDOW_SECONDS)
