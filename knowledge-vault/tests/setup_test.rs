@@ -6,7 +6,10 @@ use serde_json::{json, Value};
 use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
-    adapters::surreal::{schema::run_migrations, user_repo::SurrealUserRepo},
+    adapters::surreal::{
+        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
+        user_repo::SurrealUserRepo,
+    },
     web::{router::build_router, state::AppState},
 };
 
@@ -15,8 +18,13 @@ async fn make_test_server() -> TestServer {
     db.use_ns("kv_test").use_db("kv_test").await.unwrap();
     run_migrations(&db).await.unwrap();
 
-    let user_repo = Arc::new(SurrealUserRepo::new(db));
-    let state = AppState { user_repo };
+    let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
+    let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db));
+    let state = AppState {
+        user_repo,
+        login_attempt_repo,
+        jwt_secret: "test-secret".to_string(),
+    };
     let router = build_router(state);
 
     TestServer::new(router).unwrap()

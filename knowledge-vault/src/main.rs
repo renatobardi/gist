@@ -6,7 +6,9 @@ use surrealdb::{engine::local::Db, Surreal};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use adapters::surreal::{schema::run_migrations, user_repo::SurrealUserRepo};
+use adapters::surreal::{
+    login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations, user_repo::SurrealUserRepo,
+};
 use web::{router::build_router, state::AppState};
 
 #[tokio::main]
@@ -21,13 +23,20 @@ async fn main() -> anyhow::Result<()> {
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(8080);
+    let jwt_secret = std::env::var("KV_JWT_SECRET")
+        .unwrap_or_else(|_| "dev-secret-change-in-production".to_string());
 
     let db = open_db(&data_dir).await?;
     run_migrations(&db).await?;
     info!("Database schema initialized");
 
-    let user_repo = Arc::new(SurrealUserRepo::new(db));
-    let state = AppState { user_repo };
+    let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
+    let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db));
+    let state = AppState {
+        user_repo,
+        login_attempt_repo,
+        jwt_secret,
+    };
     let router = build_router(state);
 
     let addr = format!("0.0.0.0:{port}");
