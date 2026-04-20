@@ -190,7 +190,11 @@ async fn compute_retry_after(state: &AppState, email: &str) -> u64 {
             let now = chrono::Utc::now().timestamp();
             let lockout_end = oldest_ts + LOCKOUT_WINDOW_SECONDS as i64;
             let remaining = lockout_end - now;
-            if remaining > 0 { remaining as u64 } else { 0 }
+            if remaining > 0 {
+                remaining as u64
+            } else {
+                0
+            }
         }
         _ => LOCKOUT_WINDOW_SECONDS,
     }

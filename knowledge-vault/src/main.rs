@@ -7,10 +7,8 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use adapters::surreal::{
-    login_attempt_repo::SurrealLoginAttemptRepo,
-    schema::run_migrations,
-    token_repo::SurrealTokenRepo,
-    user_repo::SurrealUserRepo,
+    login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
+    token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
 };
 use web::{router::build_router, state::AppState};
 
@@ -27,7 +25,9 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(8080);
     let jwt_secret = std::env::var("KV_JWT_SECRET").unwrap_or_else(|_| {
-        tracing::warn!("KV_JWT_SECRET is not set — using insecure default. Set this variable in production.");
+        tracing::warn!(
+            "KV_JWT_SECRET is not set — using insecure default. Set this variable in production."
+        );
         "dev-secret-change-in-production".to_string()
     });
 

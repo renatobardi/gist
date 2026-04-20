@@ -69,7 +69,11 @@ pub async fn post_token(
     let token = generate_pat();
     let hash = hash_pat(&token);
 
-    match state.token_repo.create(&auth.user_id, name.clone(), hash).await {
+    match state
+        .token_repo
+        .create(&auth.user_id, name.clone(), hash)
+        .await
+    {
         Ok(token_id) => (
             StatusCode::CREATED,
             Json(CreateTokenResponse {

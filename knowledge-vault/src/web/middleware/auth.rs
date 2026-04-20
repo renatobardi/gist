@@ -6,19 +6,20 @@ use axum::{
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
-use crate::{
-    domain::user::AuthClaims,
-    web::state::AppState,
-};
+use crate::{domain::user::AuthClaims, web::state::AppState};
 
 pub struct AuthenticatedUser {
     pub user_id: String,
 }
 
+#[allow(clippy::result_large_err)]
 impl FromRequestParts<AppState> for AuthenticatedUser {
     type Rejection = Response;
 
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let token = extract_bearer(parts).or_else(|| extract_session_cookie(parts));
 
         let token = match token {
@@ -43,14 +44,13 @@ fn extract_bearer(parts: &Parts) -> Option<String> {
 fn extract_session_cookie(parts: &Parts) -> Option<String> {
     let header = parts.headers.get(axum::http::header::COOKIE)?;
     let value = header.to_str().ok()?;
-    value
-        .split(';')
-        .find_map(|part| {
-            let part = part.trim();
-            part.strip_prefix("session=").map(|v| v.to_string())
-        })
+    value.split(';').find_map(|part| {
+        let part = part.trim();
+        part.strip_prefix("session=").map(|v| v.to_string())
+    })
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_jwt(token: String, state: &AppState) -> Result<AuthenticatedUser, Response> {
     let decoded = decode::<AuthClaims>(
         &token,
@@ -64,6 +64,7 @@ fn validate_jwt(token: String, state: &AppState) -> Result<AuthenticatedUser, Re
     })
 }
 
+#[allow(clippy::result_large_err)]
 async fn validate_pat(token: String, state: &AppState) -> Result<AuthenticatedUser, Response> {
     let pat = state
         .token_repo

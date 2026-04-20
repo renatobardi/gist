@@ -26,7 +26,12 @@ pub trait UserRepo: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait TokenRepo: Send + Sync {
-    async fn create(&self, user_id: &str, name: String, token_hash: String) -> Result<String, RepoError>;
+    async fn create(
+        &self,
+        user_id: &str,
+        name: String,
+        token_hash: String,
+    ) -> Result<String, RepoError>;
     async fn list(&self, user_id: &str) -> Result<Vec<PersonalAccessToken>, RepoError>;
     async fn find_by_token(&self, token: &str) -> Result<Option<PersonalAccessToken>, RepoError>;
     async fn revoke(&self, token_id: &str, user_id: &str) -> Result<(), RepoError>;
@@ -35,6 +40,14 @@ pub trait TokenRepo: Send + Sync {
 #[async_trait::async_trait]
 pub trait LoginAttemptRepo: Send + Sync {
     async fn record(&self, email: &str, succeeded: bool) -> Result<(), RepoError>;
-    async fn count_recent_failures(&self, email: &str, window_seconds: u64) -> Result<u64, RepoError>;
-    async fn oldest_recent_failure_ts(&self, email: &str, window_seconds: u64) -> Result<Option<i64>, RepoError>;
+    async fn count_recent_failures(
+        &self,
+        email: &str,
+        window_seconds: u64,
+    ) -> Result<u64, RepoError>;
+    async fn oldest_recent_failure_ts(
+        &self,
+        email: &str,
+        window_seconds: u64,
+    ) -> Result<Option<i64>, RepoError>;
 }

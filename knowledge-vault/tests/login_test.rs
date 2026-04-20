@@ -59,16 +59,34 @@ async fn login_with_valid_credentials_returns_200_with_token() {
     response.assert_status(StatusCode::OK);
 
     let body: Value = response.json();
-    assert!(body["token"].is_string(), "response must contain a token string");
+    assert!(
+        body["token"].is_string(),
+        "response must contain a token string"
+    );
     let token = body["token"].as_str().unwrap();
     assert!(!token.is_empty(), "token must not be empty");
 
-    let cookie = response.headers().get("set-cookie").expect("Set-Cookie header must be present");
+    let cookie = response
+        .headers()
+        .get("set-cookie")
+        .expect("Set-Cookie header must be present");
     let cookie_str = cookie.to_str().unwrap();
-    assert!(cookie_str.contains("session="), "cookie must contain session=");
-    assert!(cookie_str.to_lowercase().contains("httponly"), "cookie must be HttpOnly");
-    assert!(cookie_str.to_lowercase().contains("secure"), "cookie must be Secure");
-    assert!(cookie_str.to_lowercase().contains("samesite=strict"), "cookie must be SameSite=Strict");
+    assert!(
+        cookie_str.contains("session="),
+        "cookie must contain session="
+    );
+    assert!(
+        cookie_str.to_lowercase().contains("httponly"),
+        "cookie must be HttpOnly"
+    );
+    assert!(
+        cookie_str.to_lowercase().contains("secure"),
+        "cookie must be Secure"
+    );
+    assert!(
+        cookie_str.to_lowercase().contains("samesite=strict"),
+        "cookie must be SameSite=Strict"
+    );
 }
 
 // Wrong password returns 401

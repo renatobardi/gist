@@ -90,12 +90,7 @@ pub async fn post_setup_form(
     handle_setup(state, input.email, input.password, false).await
 }
 
-async fn handle_setup(
-    state: AppState,
-    email: String,
-    password: String,
-    is_json: bool,
-) -> Response {
+async fn handle_setup(state: AppState, email: String, password: String, is_json: bool) -> Response {
     // Check if already set up
     let count = match state.user_repo.count().await {
         Ok(n) => n,
@@ -179,8 +174,7 @@ async fn handle_setup(
 }
 
 fn hash_password(password: &str) -> Result<String, String> {
-    let params = Params::new(65536, 3, 1, None)
-        .map_err(|e| e.to_string())?;
+    let params = Params::new(65536, 3, 1, None).map_err(|e| e.to_string())?;
     let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
     let salt = SaltString::generate(&mut OsRng);
     argon2
