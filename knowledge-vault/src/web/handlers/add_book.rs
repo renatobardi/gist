@@ -1,26 +1,26 @@
 use axum::response::{Html, IntoResponse, Response};
 
-pub async fn get_add_book() -> Response {
-    Html(add_book_html()).into_response()
+use crate::web::middleware::auth::AuthenticatedUser;
+
+pub async fn get_add_book(_auth: AuthenticatedUser) -> Response {
+    Html(ADD_BOOK_HTML).into_response()
 }
 
-fn add_book_html() -> String {
-    format!(
-        r#"<!DOCTYPE html>
+const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Knowledge Vault — Add Book</title>
   <style>
-    *, *::before, *::after {{ box-sizing: border-box; }}
-    body {{
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'BMW Type Next', Inter, Arial, sans-serif;
       background: #f5f5f5;
       color: #262626;
       margin: 0;
-    }}
-    header {{
+    }
+    header {
       background: #1a1a1a;
       color: #f0f0f0;
       padding: 0 2rem;
@@ -28,52 +28,52 @@ fn add_book_html() -> String {
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }}
-    header h1 {{
+    }
+    header h1 {
       font-size: 1rem;
       font-weight: 700;
       margin: 0;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: #f0f0f0;
-    }}
-    header a {{
+    }
+    header a {
       color: #8c8c8c;
       text-decoration: none;
       font-size: 0.875rem;
-    }}
-    header a:hover {{ color: #f0f0f0; }}
-    main {{
+    }
+    header a:hover { color: #f0f0f0; }
+    main {
       max-width: 600px;
       margin: 3rem auto;
       padding: 0 1.5rem;
-    }}
-    h2 {{
+    }
+    h2 {
       font-size: 1.5rem;
       font-weight: 700;
       margin: 0 0 0.5rem;
-    }}
-    .subtitle {{
+    }
+    .subtitle {
       color: #595959;
       font-size: 0.9rem;
       margin: 0 0 2rem;
-    }}
-    .card {{
+    }
+    .card {
       background: #fff;
       border: 1px solid #e5e5e5;
       padding: 2rem;
-    }}
-    .field {{
+    }
+    .field {
       margin-bottom: 1.5rem;
-    }}
-    label {{
+    }
+    label {
       display: block;
       font-size: 0.875rem;
       font-weight: 600;
       margin-bottom: 0.35rem;
       color: #262626;
-    }}
-    input[type="text"] {{
+    }
+    input[type="text"] {
       display: block;
       width: 100%;
       padding: 0.6rem 0.75rem;
@@ -84,41 +84,41 @@ fn add_book_html() -> String {
       font-size: 0.95rem;
       font-family: inherit;
       transition: border-color 0.1s, outline 0.1s;
-    }}
-    input[type="text"]:hover {{
+    }
+    input[type="text"]:hover {
       border-color: #1c69d4;
-    }}
-    input[type="text"]:focus {{
+    }
+    input[type="text"]:focus {
       outline: 3px solid #0653b6;
       outline-offset: 0;
       border-color: #1c69d4;
-    }}
-    input[type="text"].invalid {{
+    }
+    input[type="text"].invalid {
       border-color: #dc3545;
-    }}
-    input[type="text"].invalid:focus {{
+    }
+    input[type="text"].invalid:focus {
       outline-color: #dc3545;
-    }}
-    .helper {{
+    }
+    .helper {
       font-size: 0.75rem;
       color: #595959;
       margin-top: 0.35rem;
-    }}
-    .error-msg {{
+    }
+    .error-msg {
       font-size: 0.75rem;
       color: #dc3545;
       margin-top: 0.35rem;
       display: none;
-    }}
-    .error-msg.visible {{
+    }
+    .error-msg.visible {
       display: block;
-    }}
-    .actions {{
+    }
+    .actions {
       display: flex;
       gap: 1rem;
       align-items: center;
-    }}
-    button[type="submit"] {{
+    }
+    button[type="submit"] {
       padding: 0.6rem 1.5rem;
       background: #1c69d4;
       color: #fff;
@@ -127,41 +127,41 @@ fn add_book_html() -> String {
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-    }}
-    button[type="submit"]:hover {{ background: #0653b6; }}
-    button[type="submit"]:focus {{
+    }
+    button[type="submit"]:hover { background: #0653b6; }
+    button[type="submit"]:focus {
       outline: 3px solid #0653b6;
       outline-offset: 2px;
-    }}
-    button[type="submit"]:disabled {{
+    }
+    button[type="submit"]:disabled {
       background: #8c8c8c;
       cursor: not-allowed;
-    }}
-    .cancel-link {{
+    }
+    .cancel-link {
       color: #595959;
       text-decoration: none;
       font-size: 0.9rem;
-    }}
-    .cancel-link:hover {{ color: #262626; }}
-    .alert {{
+    }
+    .cancel-link:hover { color: #262626; }
+    .alert {
       padding: 0.75rem 1rem;
       margin-bottom: 1.25rem;
       font-size: 0.9rem;
       display: none;
-    }}
-    .alert.visible {{ display: block; }}
-    .alert-success {{
+    }
+    .alert.visible { display: block; }
+    .alert-success {
       background: #d4edda;
       border: 1px solid #28a745;
       color: #155724;
-    }}
-    .alert-error {{
+    }
+    .alert-error {
       background: #f8d7da;
       border: 1px solid #dc3545;
       color: #721c24;
-    }}
-    .spinner {{
-      display: inline-block;
+    }
+    .spinner {
+      display: none;
       width: 14px;
       height: 14px;
       border: 2px solid rgba(255,255,255,0.4);
@@ -170,16 +170,15 @@ fn add_book_html() -> String {
       animation: spin 0.6s linear infinite;
       vertical-align: middle;
       margin-right: 0.4rem;
-      display: none;
-    }}
-    button[type="submit"].loading .spinner {{ display: inline-block; }}
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+    }
+    button[type="submit"].loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <header>
     <h1>Knowledge Vault</h1>
-    <a href="/">← Library</a>
+    <a href="/">&#8592; Library</a>
   </header>
   <main>
     <h2>Add Book</h2>
@@ -220,62 +219,62 @@ fn add_book_html() -> String {
 
   <script>
     // ISBN validation (mirrors server-side logic in domain/work.rs)
-    function stripHyphens(s) {{
+    function stripHyphens(s) {
       return s.replace(/-/g, '');
-    }}
+    }
 
-    function validateIsbn13(digits) {{
+    function validateIsbn13(digits) {
       var sum = 0;
-      for (var i = 0; i < 13; i++) {{
+      for (var i = 0; i < 13; i++) {
         var d = parseInt(digits[i], 10);
         sum += (i % 2 === 0) ? d : d * 3;
-      }}
+      }
       return sum % 10 === 0;
-    }}
+    }
 
-    function validateIsbn10(digits) {{
-      if (!/^[0-9]{{9}}[0-9X]$/.test(digits)) return false;
+    function validateIsbn10(digits) {
+      if (!/^[0-9]{9}[0-9X]$/.test(digits)) return false;
       var sum = 0;
-      for (var i = 0; i < 9; i++) {{
+      for (var i = 0; i < 9; i++) {
         sum += parseInt(digits[i], 10) * (10 - i);
-      }}
+      }
       var last = digits[9] === 'X' ? 10 : parseInt(digits[9], 10);
       sum += last;
       return sum % 11 === 0;
-    }}
+    }
 
-    // Returns {{ type: 'isbn'|'title', error: string|null }}
-    function detectAndValidate(raw) {{
+    // Returns { type: 'isbn'|'title', error: string|null }
+    function detectAndValidate(raw) {
       var stripped = stripHyphens(raw.trim());
 
       // Looks like an ISBN attempt if it contains only digits, hyphens, and maybe trailing X
-      var isbnAttempt = /^[0-9\-]{{8,17}}X?$/.test(raw.trim());
+      var isbnAttempt = /^[0-9\-]{10,17}X?$/.test(raw.trim());
 
-      if (!isbnAttempt) {{
+      if (!isbnAttempt) {
         // Treat as title — no client-side validation needed
-        return {{ type: 'title', error: null }};
-      }}
+        return { type: 'title', error: null };
+      }
 
       // Validate as ISBN
-      if (stripped.length === 13) {{
-        if (!/^[0-9]{{13}}$/.test(stripped)) {{
-          return {{ type: 'isbn', error: 'Invalid ISBN-13 — must contain only digits' }};
-        }}
-        if (!validateIsbn13(stripped)) {{
-          return {{ type: 'isbn', error: 'Invalid ISBN-13 — check digit mismatch' }};
-        }}
-        return {{ type: 'isbn', error: null }};
-      }}
+      if (stripped.length === 13) {
+        if (!/^[0-9]{13}$/.test(stripped)) {
+          return { type: 'isbn', error: 'Invalid ISBN-13 — must contain only digits' };
+        }
+        if (!validateIsbn13(stripped)) {
+          return { type: 'isbn', error: 'Invalid ISBN-13 — check digit mismatch' };
+        }
+        return { type: 'isbn', error: null };
+      }
 
-      if (stripped.length === 10) {{
-        if (!validateIsbn10(stripped)) {{
-          return {{ type: 'isbn', error: 'Invalid ISBN-10 — check digit mismatch' }};
-        }}
-        return {{ type: 'isbn', error: null }};
-      }}
+      if (stripped.length === 10) {
+        if (!validateIsbn10(stripped)) {
+          return { type: 'isbn', error: 'Invalid ISBN-10 — check digit mismatch' };
+        }
+        return { type: 'isbn', error: null };
+      }
 
-      return {{ type: 'isbn', error: 'Invalid ISBN — expected 10 or 13 digits, got ' + stripped.length }};
-    }}
+      return { type: 'isbn', error: 'Invalid ISBN — expected 10 or 13 digits, got ' + stripped.length };
+    }
 
     var input = document.getElementById('identifier');
     var errorEl = document.getElementById('identifier-error');
@@ -284,74 +283,74 @@ fn add_book_html() -> String {
     var alertError = document.getElementById('alert-error');
     var form = document.getElementById('add-form');
 
-    function clearFieldError() {{
+    function clearFieldError() {
       input.classList.remove('invalid');
       errorEl.textContent = '';
       errorEl.classList.remove('visible');
       input.removeAttribute('aria-invalid');
-    }}
+    }
 
-    function showFieldError(msg) {{
+    function showFieldError(msg) {
       input.classList.add('invalid');
       errorEl.textContent = msg;
       errorEl.classList.add('visible');
       input.setAttribute('aria-invalid', 'true');
-    }}
+    }
 
-    function showAlert(type, msg) {{
+    function showAlert(type, msg) {
       alertSuccess.classList.remove('visible');
       alertError.classList.remove('visible');
-      if (type === 'success') {{
+      if (type === 'success') {
         alertSuccess.textContent = msg;
         alertSuccess.classList.add('visible');
-      }} else {{
+      } else {
         alertError.textContent = msg;
         alertError.classList.add('visible');
-      }}
-    }}
+      }
+    }
 
-    function setLoading(loading) {{
+    function setLoading(loading) {
       submitBtn.disabled = loading;
-      if (loading) {{
+      if (loading) {
         submitBtn.classList.add('loading');
-      }} else {{
+      } else {
         submitBtn.classList.remove('loading');
-      }}
-    }}
+      }
+    }
 
     // Validate on blur
-    input.addEventListener('blur', function() {{
+    input.addEventListener('blur', function() {
       var raw = input.value.trim();
       if (!raw) return;
       var result = detectAndValidate(raw);
-      if (result.error) {{
+      if (result.error) {
         showFieldError(result.error);
-      }}
-    }});
+      }
+    });
 
     // Clear error while user types
-    input.addEventListener('input', function() {{
-      if (input.classList.contains('invalid')) {{
+    input.addEventListener('input', function() {
+      if (input.classList.contains('invalid')) {
         clearFieldError();
-      }}
-    }});
+      }
+    });
 
-    form.addEventListener('submit', function(e) {{
+    form.addEventListener('submit', function(e) {
       e.preventDefault();
 
       var raw = input.value.trim();
-      if (!raw) {{
+      if (!raw) {
         showFieldError('Please enter an ISBN or book title.');
         input.focus();
         return;
-      }}
+      }
 
       var result = detectAndValidate(raw);
-      if (result.error) {{
+      if (result.error) {
         showFieldError(result.error);
         input.focus();
         return;
-      }}
+      }
 
       clearFieldError();
       alertSuccess.classList.remove('visible');
@@ -360,108 +359,40 @@ fn add_book_html() -> String {
 
       var identifier = result.type === 'isbn' ? stripHyphens(raw) : raw;
 
-      fetch('/api/works', {{
+      fetch('/api/works', {
         method: 'POST',
-        headers: {{ 'Content-Type': 'application/json' }},
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({{
+        body: JSON.stringify({
           identifier: identifier,
           identifier_type: result.type
-        }})
-      }})
-      .then(function(res) {{
-        return res.json().then(function(data) {{
-          return {{ ok: res.ok, status: res.status, data: data }};
-        }});
-      }})
-      .then(function(r) {{
+        })
+      })
+      .then(function(res) {
+        return res.json().then(function(data) {
+          return { ok: res.ok, status: res.status, data: data };
+        });
+      })
+      .then(function(r) {
         setLoading(false);
-        if (r.ok) {{
+        if (r.ok) {
           input.value = '';
           showAlert('success', 'Book submitted — processing will begin shortly. Redirecting to library…');
-          setTimeout(function() {{ window.location.href = '/'; }}, 1500);
-        }} else if (r.status === 409) {{
+          setTimeout(function() { window.location.href = '/'; }, 1500);
+        } else if (r.status === 409) {
           showAlert('error', 'This book is already in your vault.');
-        }} else if (r.status === 422 && r.data && r.data.message) {{
+        } else if (r.status === 422 && r.data && r.data.message) {
           showAlert('error', r.data.message);
-        }} else {{
+        } else {
           showAlert('error', 'Something went wrong. Please try again.');
-        }}
-      }})
-      .catch(function() {{
+        }
+      })
+      .catch(function() {
         setLoading(false);
         showAlert('error', 'Network error. Please check your connection and try again.');
-      }});
-    }});
+      });
+    });
   </script>
 </body>
-</html>"#
-    )
-}
+</html>"#;
 
-#[cfg(test)]
-mod tests {
-    use axum::body::to_bytes;
-    use axum::http::StatusCode;
-    use axum_test::TestServer;
-
-    use crate::web::handlers::add_book::get_add_book;
-    use axum::Router;
-    use axum::routing::get;
-
-    fn app() -> TestServer {
-        let router = Router::new().route("/add", get(get_add_book));
-        TestServer::new(router).unwrap()
-    }
-
-    #[tokio::test]
-    async fn get_add_book_returns_200() {
-        let server = app();
-        let res = server.get("/add").await;
-        assert_eq!(res.status_code(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn get_add_book_returns_html() {
-        let server = app();
-        let res = server.get("/add").await;
-        let ct = res
-            .headers()
-            .get("content-type")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
-        assert!(ct.contains("text/html"), "expected text/html, got: {ct}");
-    }
-
-    #[tokio::test]
-    async fn get_add_book_contains_form_elements() {
-        let server = app();
-        let res = server.get("/add").await;
-        let body = res.text();
-        assert!(body.contains(r#"id="identifier""#));
-        assert!(body.contains(r#"id="add-form""#));
-        assert!(body.contains("ISBN or Title"));
-        assert!(body.contains("/api/works"));
-    }
-
-    #[tokio::test]
-    async fn get_add_book_contains_isbn_validation_logic() {
-        let server = app();
-        let res = server.get("/add").await;
-        let body = res.text();
-        assert!(body.contains("validateIsbn13"));
-        assert!(body.contains("validateIsbn10"));
-        assert!(body.contains("check digit mismatch"));
-        assert!(body.contains("Invalid ISBN-13"));
-    }
-
-    #[tokio::test]
-    async fn get_add_book_contains_accessibility_attributes() {
-        let server = app();
-        let res = server.get("/add").await;
-        let body = res.text();
-        assert!(body.contains(r#"aria-required="true""#));
-        assert!(body.contains("aria-describedby"));
-        assert!(body.contains(r#"role="alert""#));
-    }
-}

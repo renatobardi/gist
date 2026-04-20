@@ -18,7 +18,7 @@ pub fn security_headers_layer() -> [SetResponseHeaderLayer<HeaderValue>; 4] {
         SetResponseHeaderLayer::overriding(
             header::HeaderName::from_static("content-security-policy"),
             HeaderValue::from_static(
-                "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
+                "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
             ),
         ),
     ]
