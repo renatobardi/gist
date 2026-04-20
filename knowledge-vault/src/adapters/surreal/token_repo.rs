@@ -94,12 +94,10 @@ impl TokenRepo for SurrealTokenRepo {
         records.into_iter().map(|r| r.into_domain()).collect()
     }
 
-    async fn find_by_hash(&self, token_hash: &str) -> Result<Option<PersonalAccessToken>, RepoError> {
-        let hash_owned = token_hash.to_string();
+    async fn find_by_token(&self, token: &str) -> Result<Option<PersonalAccessToken>, RepoError> {
         let mut result = self
             .db
-            .query("SELECT * FROM personal_access_tokens WHERE token_hash = $hash AND revoked_at IS NONE LIMIT 1")
-            .bind(("hash", hash_owned))
+            .query("SELECT * FROM personal_access_tokens WHERE revoked_at IS NONE")
             .await
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
@@ -107,7 +105,13 @@ impl TokenRepo for SurrealTokenRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        records.into_iter().next().map(|r| r.into_domain()).transpose()
+        for record in records {
+            if crate::domain::user::verify_pat(token, &record.token_hash) {
+                return record.into_domain().map(Some);
+            }
+        }
+
+        Ok(None)
     }
 
     async fn revoke(&self, token_id: &str, user_id: &str) -> Result<(), RepoError> {

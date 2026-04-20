@@ -1,8 +1,9 @@
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::password_hash::SaltString;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use email_address::EmailAddress;
-use rand::Rng;
+use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -50,9 +51,24 @@ pub fn generate_pat() -> String {
     format!("ens_{}", URL_SAFE_NO_PAD.encode(bytes))
 }
 
-/// Hashes a PAT using SHA-256 for storage. High-entropy tokens do not require slow hashing.
+/// Hashes a PAT using Argon2id with a random salt for at-rest protection.
 pub fn hash_pat(token: &str) -> String {
-    hex::encode(Sha256::digest(token.as_bytes()))
+    let salt = SaltString::generate(&mut OsRng);
+    Argon2::default()
+        .hash_password(token.as_bytes(), &salt)
+        .expect("argon2 hash must not fail for valid UTF-8 input")
+        .to_string()
+}
+
+/// Verifies a PAT against a stored Argon2id hash.
+pub fn verify_pat(token: &str, hash: &str) -> bool {
+    let parsed = match PasswordHash::new(hash) {
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+    Argon2::default()
+        .verify_password(token.as_bytes(), &parsed)
+        .is_ok()
 }
 
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
@@ -134,13 +150,26 @@ mod tests {
     }
 
     #[test]
-    fn hash_pat_is_deterministic() {
+    fn hash_pat_uses_different_salt_each_time() {
         let token = "ens_testtoken";
-        assert_eq!(hash_pat(token), hash_pat(token));
+        assert_ne!(hash_pat(token), hash_pat(token), "Argon2id hashes must use unique salts");
     }
 
     #[test]
     fn hash_pat_differs_for_different_tokens() {
         assert_ne!(hash_pat("ens_aaa"), hash_pat("ens_bbb"));
+    }
+
+    #[test]
+    fn verify_pat_succeeds_for_correct_token() {
+        let token = "ens_testtoken";
+        let hash = hash_pat(token);
+        assert!(verify_pat(token, &hash));
+    }
+
+    #[test]
+    fn verify_pat_fails_for_wrong_token() {
+        let hash = hash_pat("ens_correct");
+        assert!(!verify_pat("ens_wrong", &hash));
     }
 }

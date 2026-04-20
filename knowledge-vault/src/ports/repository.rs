@@ -28,7 +28,7 @@ pub trait UserRepo: Send + Sync {
 pub trait TokenRepo: Send + Sync {
     async fn create(&self, user_id: &str, name: String, token_hash: String) -> Result<String, RepoError>;
     async fn list(&self, user_id: &str) -> Result<Vec<PersonalAccessToken>, RepoError>;
-    async fn find_by_hash(&self, token_hash: &str) -> Result<Option<PersonalAccessToken>, RepoError>;
+    async fn find_by_token(&self, token: &str) -> Result<Option<PersonalAccessToken>, RepoError>;
     async fn revoke(&self, token_id: &str, user_id: &str) -> Result<(), RepoError>;
 }
 

@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
 use crate::{
-    domain::user::{hash_pat, AuthClaims},
+    domain::user::AuthClaims,
     web::state::AppState,
 };
 
@@ -65,11 +65,9 @@ fn validate_jwt(token: String, state: &AppState) -> Result<AuthenticatedUser, Re
 }
 
 async fn validate_pat(token: String, state: &AppState) -> Result<AuthenticatedUser, Response> {
-    let hash = hash_pat(&token);
-
     let pat = state
         .token_repo
-        .find_by_hash(&hash)
+        .find_by_token(&token)
         .await
         .map_err(|_| unauthorized("invalid_token", "Invalid token"))?
         .ok_or_else(|| unauthorized("invalid_token", "Invalid token"))?;
