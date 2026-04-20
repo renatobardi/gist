@@ -134,7 +134,7 @@ impl WorkerService {
             .map_err(|e| format!("db update_metadata failed: {e}"))?;
 
         // Call Gemini for concept extraction
-        let gemini_response = self
+        let (gemini_response, raw_json) = self
             .gemini
             .extract_concepts(&metadata)
             .await
@@ -142,9 +142,6 @@ impl WorkerService {
                 GeminiError::Transient(msg) => format!("transient Gemini error: {msg}"),
                 GeminiError::Permanent(msg) => format!("permanent Gemini error: {msg}"),
             })?;
-
-        let raw_json = serde_json::to_string(&gemini_response)
-            .map_err(|e| format!("failed to serialize Gemini response: {e}"))?;
 
         self.persist_graph(work_id, &gemini_response, &raw_json)
             .await?;

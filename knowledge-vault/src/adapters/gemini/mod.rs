@@ -175,7 +175,10 @@ struct GeminiApiError {
 
 #[async_trait]
 impl GeminiPort for GeminiAdapter {
-    async fn extract_concepts(&self, metadata: &BookMetadata) -> Result<GeminiResponse, GeminiError> {
+    async fn extract_concepts(
+        &self,
+        metadata: &BookMetadata,
+    ) -> Result<(GeminiResponse, String), GeminiError> {
         let url = format!(
             "{}/v1beta/models/{}:generateContent?key={}",
             self.base_url, self.model, self.api_key
@@ -218,6 +221,14 @@ impl GeminiPort for GeminiAdapter {
         if status.is_server_error() {
             return Err(GeminiError::Transient(format!(
                 "Gemini server error: {status}"
+            )));
+        }
+
+        // Any other 4xx (e.g. 401, 403) is a permanent failure — retrying would not help.
+        if status.is_client_error() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(GeminiError::Permanent(format!(
+                "Gemini client error {status}: {body}"
             )));
         }
 
@@ -288,7 +299,7 @@ impl GeminiPort for GeminiAdapter {
             }
         }
 
-        Ok(gemini_response)
+        Ok((gemini_response, raw_text))
     }
 }
 
@@ -348,9 +359,10 @@ mod tests {
         let result = adapter.extract_concepts(&make_metadata()).await;
 
         assert!(result.is_ok(), "expected Ok, got: {result:?}");
-        let resp = result.unwrap();
+        let (resp, raw) = result.unwrap();
         assert_eq!(resp.concepts.len(), 1);
         assert_eq!(resp.concepts[0].name, "Clean Code");
+        assert!(raw.contains("Clean Code"), "raw text should contain concept name");
     }
 
     #[tokio::test]

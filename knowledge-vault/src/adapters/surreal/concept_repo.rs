@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::local::Db, Surreal};
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
@@ -122,11 +123,17 @@ impl ConceptRepo for SurrealConceptRepo {
 
         let from_rec = match from_records.into_iter().next() {
             Some(r) => r,
-            None => return Ok(()), // source concept missing, skip edge
+            None => {
+                warn!(from = %edge.from_name, to = %edge.to_name, "skipping relacionado_a: source concept not found");
+                return Ok(());
+            }
         };
         let to_rec = match to_records.into_iter().next() {
             Some(r) => r,
-            None => return Ok(()), // target concept missing, skip edge
+            None => {
+                warn!(from = %edge.from_name, to = %edge.to_name, "skipping relacionado_a: target concept not found");
+                return Ok(());
+            }
         };
 
         let from_id = {

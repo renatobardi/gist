@@ -31,5 +31,9 @@ impl std::fmt::Display for GeminiError {
 
 #[async_trait]
 pub trait GeminiPort: Send + Sync {
-    async fn extract_concepts(&self, metadata: &BookMetadata) -> Result<GeminiResponse, GeminiError>;
+    /// Returns the parsed response and the raw JSON text from Gemini (before struct deserialization).
+    async fn extract_concepts(
+        &self,
+        metadata: &BookMetadata,
+    ) -> Result<(GeminiResponse, String), GeminiError>;
 }
