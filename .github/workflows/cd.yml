@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -13,6 +17,10 @@ jobs:
   build:
     name: Build and Deploy
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,20 +28,30 @@ jobs:
 
       - uses: mozilla-actions/sccache-action@v0.0.9
 
+      - name: Cache cross binary
+        id: cache-cross
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cross
+          key: cross-${{ runner.os }}
+
       - name: Install cross
+        if: steps.cache-cross.outputs.cache-hit != 'true'
         run: cargo install cross --locked
+
+      - name: Install aarch64 binutils
+        run: sudo apt-get install -y --no-install-recommends binutils-aarch64-linux-gnu
 
       - name: Build for aarch64-unknown-linux-musl
         working-directory: knowledge-vault
         run: cross build --release --target aarch64-unknown-linux-musl
 
       - name: Strip binary
-        run: |
-          aarch64-linux-gnu-strip knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault || true
+        run: aarch64-linux-gnu-strip knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault
 
       - name: Verify binary size
         run: |
-          SIZE=$(stat -f%z knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault 2>/dev/null || stat -c%s knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault)
+          SIZE=$(stat -c%s knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault)
           LIMIT=$((60 * 1024 * 1024))
           if [ "$SIZE" -gt "$LIMIT" ]; then
             echo "Binary size exceeds 60MB limit: $SIZE bytes"
@@ -41,46 +59,35 @@ jobs:
           fi
           echo "Binary size: $((SIZE / 1024 / 1024))MB"
 
-      - name: Deploy to Oracle Cloud
+      - name: Setup SSH
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           mkdir -p ~/.ssh
           echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
+      - name: Deploy to Oracle Cloud
+        run: |
+          REMOTE_HOST="${DEPLOY_USER}@${DEPLOY_HOST}"
           BINARY_PATH="knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault"
-          REMOTE_PATH="${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"
 
           # Backup current binary for rollback
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$REMOTE_PATH" \
-            "[ -f knowledge-vault ] && cp knowledge-vault knowledge-vault.backup || true"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" \
+            "[ -f ${DEPLOY_PATH}/knowledge-vault ] && sudo cp ${DEPLOY_PATH}/knowledge-vault ${DEPLOY_PATH}/knowledge-vault.backup || true"
 
           # Deploy new binary
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$BINARY_PATH" "$REMOTE_PATH"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$BINARY_PATH" "${REMOTE_HOST}:${DEPLOY_PATH}/knowledge-vault"
 
           # Make executable and restart service
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$REMOTE_PATH" \
-            "chmod +x knowledge-vault && systemctl restart knowledge-vault"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" \
+            "sudo chmod +x ${DEPLOY_PATH}/knowledge-vault && sudo systemctl restart knowledge-vault"
 
       - name: Health check
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-          # Wait for service to be active
           for i in {1..30}; do
-            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
               "systemctl is-active knowledge-vault" > /dev/null 2>&1; then
               echo "Service is active"
               exit 0
