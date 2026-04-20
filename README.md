@@ -1,10 +1,10 @@
-# Knowledge Vault - Personal Knowledge Management System (PoC)
+# Knowledge Vault - Personal Knowledge Management System
 
 A single-binary, serverless-ready Personal Knowledge Vault system that transforms book references into interconnected knowledge graphs using AI-powered analysis.
 
 ## 🎯 Vision
 
-Build a Personal Knowledge Vault (PoC) — a unified binary application that:
+Build a Personal Knowledge Vault — a unified binary application that:
 - Ingests book references via Open Library API
 - Processes data asynchronously with intelligent concept extraction
 - Stores and visualizes knowledge as interconnected graphs
