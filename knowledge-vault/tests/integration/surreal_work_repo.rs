@@ -85,7 +85,7 @@ async fn find_by_open_library_id_returns_none_for_unknown_id() {
 }
 
 #[tokio::test]
-async fn list_works_returns_all_works_in_descending_order() {
+async fn list_works_returns_all_works() {
     let repo = make_repo().await;
     repo.create_work("9780132350884").await.unwrap();
     repo.create_work("0132350882").await.unwrap();
@@ -103,6 +103,18 @@ async fn list_works_respects_limit() {
 
     let works = repo.list_works(1, 0).await.unwrap();
     assert_eq!(works.len(), 1);
+}
+
+#[tokio::test]
+async fn list_works_respects_offset() {
+    let repo = make_repo().await;
+    repo.create_work("9780132350884").await.unwrap();
+    repo.create_work("0132350882").await.unwrap();
+
+    let all = repo.list_works(50, 0).await.unwrap();
+    let paginated = repo.list_works(50, 1).await.unwrap();
+    assert_eq!(paginated.len(), 1);
+    assert_eq!(paginated[0].id, all[1].id);
 }
 
 #[tokio::test]
@@ -158,4 +170,16 @@ async fn update_work_status_sets_error_msg_on_failure() {
         updated.error_msg.as_deref(),
         Some("timeout calling Gemini API")
     );
+}
+
+#[tokio::test]
+async fn update_work_status_returns_not_found_for_unknown_id() {
+    let repo = make_repo().await;
+    let result = repo
+        .update_work_status("00000000-0000-0000-0000-000000000000", "processing", None)
+        .await;
+    assert!(matches!(
+        result,
+        Err(knowledge_vault::ports::repository::RepoError::NotFound)
+    ));
 }
