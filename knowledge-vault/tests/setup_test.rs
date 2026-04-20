@@ -8,7 +8,7 @@ use surrealdb::{engine::local::Mem, Surreal};
 use knowledge_vault::{
     adapters::surreal::{
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
-        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
+        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
     web::{router::build_router, state::AppState},
 };
@@ -20,11 +20,14 @@ async fn make_test_server() -> TestServer {
 
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
-    let token_repo = Arc::new(SurrealTokenRepo::new(db));
+    let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
+    let work_repo = Arc::new(SurrealWorkRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
         token_repo,
+        work_repo,
+        message_publisher: None,
         jwt_secret: "test-secret".to_string(),
     };
     let router = build_router(state);
