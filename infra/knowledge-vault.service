@@ -1,0 +1,47 @@
+[Unit]
+Description=Knowledge Vault - Intelligent Book Graph Discovery Service
+Documentation=https://github.com/renatobardi/gist/blob/main/infra/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=knowledge-vault
+Group=knowledge-vault
+WorkingDirectory=/var/lib/knowledge-vault
+
+# Binary location
+ExecStart=/usr/local/bin/knowledge-vault
+
+# Automatic restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=80%
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+# Security hardening
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=true
+ReadWritePaths=/var/lib/knowledge-vault
+
+# Environment
+EnvironmentFile=-/etc/knowledge-vault/env
+EnvironmentFile=-/etc/knowledge-vault/config.env
+
+# Standard output and error
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=knowledge-vault
+
+# Restart limits
+StartLimitInterval=60
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target
