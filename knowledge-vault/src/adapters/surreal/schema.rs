@@ -30,6 +30,29 @@ DEFINE FIELD IF NOT EXISTS error_msg      ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS updated_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE INDEX IF NOT EXISTS work_isbn ON work COLUMNS isbn UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS concept SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS name         ON concept TYPE string;
+DEFINE FIELD IF NOT EXISTS display_name ON concept TYPE string;
+DEFINE FIELD IF NOT EXISTS description  ON concept TYPE string;
+DEFINE FIELD IF NOT EXISTS domain       ON concept TYPE string;
+DEFINE FIELD IF NOT EXISTS created_at   ON concept TYPE datetime DEFAULT time::now();
+DEFINE INDEX IF NOT EXISTS concept_name ON concept COLUMNS name UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS insight SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS summary             ON insight TYPE string;
+DEFINE FIELD IF NOT EXISTS key_points          ON insight TYPE array<string>;
+DEFINE FIELD IF NOT EXISTS raw_gemini_response ON insight TYPE string;
+DEFINE FIELD IF NOT EXISTS created_at          ON insight TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE IF NOT EXISTS interpreta SCHEMAFULL TYPE RELATION IN work OUT insight;
+
+DEFINE TABLE IF NOT EXISTS menciona SCHEMAFULL TYPE RELATION IN insight OUT concept;
+DEFINE FIELD IF NOT EXISTS relevance_weight ON menciona TYPE float;
+
+DEFINE TABLE IF NOT EXISTS relacionado_a SCHEMAFULL TYPE RELATION IN concept OUT concept;
+DEFINE FIELD IF NOT EXISTS relation_type ON relacionado_a TYPE string;
+DEFINE FIELD IF NOT EXISTS strength      ON relacionado_a TYPE float;
 "#;
 
 pub async fn run_migrations(
