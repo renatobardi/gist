@@ -110,9 +110,11 @@ fn build_transaction_sql(
              ELSE $existing_insight[0].out END;\n"
         ));
 
-        // menciona edge
+        // menciona edge — only on first write; skip on idempotent re-runs to prevent duplicates
         sql.push_str(&format!(
-            "RELATE $eff_insight_{i}->menciona->$c{i}_id SET relevance_weight = ${weight_key};\n"
+            "IF array::len($existing_insight) = 0 THEN \
+             (RELATE $eff_insight_{i}->menciona->$c{i}_id SET relevance_weight = ${weight_key}) \
+             END;\n"
         ));
 
         // relacionado_a edges
@@ -144,8 +146,11 @@ fn build_transaction_sql(
                  ELSE (CREATE concept:`{related_id}` SET name = ${rname_key}, display_name = ${rdn_key}, \
                  description = '', domain = '', created_at = time::now() RETURN id)[0].id END;\n"
             ));
+            // relacionado_a edge — only on first write; skip on idempotent re-runs to prevent duplicates
             sql.push_str(&format!(
-                "RELATE $c{i}_id->relacionado_a->$r{i}_{j}_id SET relation_type = ${rtype_key}, strength = ${rstrength_key};\n"
+                "IF array::len($existing_insight) = 0 THEN \
+                 (RELATE $c{i}_id->relacionado_a->$r{i}_{j}_id SET relation_type = ${rtype_key}, strength = ${rstrength_key}) \
+                 END;\n"
             ));
         }
     }

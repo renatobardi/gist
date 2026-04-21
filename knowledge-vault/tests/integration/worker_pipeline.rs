@@ -198,6 +198,22 @@ async fn graph_write_transaction_is_idempotent_for_same_work() {
         .unwrap();
     let counts: Vec<Count> = r.take(0).unwrap();
     assert_eq!(counts[0].count, 1, "duplicate insight created");
+
+    // Only one menciona edge should exist (idempotent re-run must not duplicate edges)
+    let mut r = db
+        .query("SELECT count() AS count FROM menciona GROUP ALL")
+        .await
+        .unwrap();
+    let counts: Vec<Count> = r.take(0).unwrap();
+    assert_eq!(counts[0].count, 1, "duplicate menciona edge created on second call");
+
+    // Only one concept node should exist
+    let mut r = db
+        .query("SELECT count() AS count FROM concept GROUP ALL")
+        .await
+        .unwrap();
+    let counts: Vec<Count> = r.take(0).unwrap();
+    assert_eq!(counts[0].count, 1, "duplicate concept created on second call");
 }
 
 /// Marks a work as failed when a permanent error occurs (no transaction involved — just status).
