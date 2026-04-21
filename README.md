@@ -502,6 +502,38 @@ All responses include the following security headers:
 
 ## 📦 Deployment
 
+Knowledge Vault is designed for efficient, single-binary deployment, especially on ARM64 architectures like Oracle Cloud's Free Tier.
+
+### Continuous Deployment (CD) with GitHub Actions
+
+The project utilizes GitHub Actions for continuous deployment to an Oracle Cloud ARM64 instance. The workflow is defined in `.github/workflows/cd.yml`.
+
+**Key features:**
+
+*   **Cross-compilation**: Automatically builds the `knowledge-vault` binary for `aarch64-unknown-linux-musl` target.
+*   **SSH Deployment**: Securely deploys the new binary to the remote server.
+    *   The compiled binary is first uploaded to a temporary path (`/tmp/knowledge-vault-new`).
+    *   The existing binary at `${DEPLOY_PATH}/knowledge-vault` is backed up to `${DEPLOY_PATH}/knowledge-vault.backup`.
+    *   The new binary is then installed with appropriate permissions using `sudo install`.
+    *   The `knowledge-vault` systemd service is restarted to load the new version.
+*   **Health Check**: After deployment, a health check is performed to ensure the service is active.
+    *   It retries 30 times with a 2-second delay between attempts (exponential backoff).
+    *   If the service does not become active, it dumps the journal logs for diagnosis.
+*   **Rollback Procedure**: In case of deployment failure or service issues, the backed-up binary can be restored manually.
+    *   Connect to the server via SSH.
+    *   `sudo systemctl stop knowledge-vault`
+    *   `sudo mv ${DEPLOY_PATH}/knowledge-vault.backup ${DEPLOY_PATH}/knowledge-vault`
+    *   `sudo systemctl start knowledge-vault`
+
+**Required Secrets for CD Workflow:**
+
+The GitHub Actions workflow requires the following repository secrets:
+
+*   `DEPLOY_HOST`: The hostname or IP address of the deployment server.
+*   `DEPLOY_USER`: The SSH user for deployment (e.g., `ubuntu`).
+*   `DEPLOY_PATH`: The absolute path on the remote server where the `knowledge-vault` binary should be installed (e.g., `/usr/local/bin`).
+*   `DEPLOY_SSH_KEY`: The private SSH key used to authenticate with the deployment server.
+
 ### Single Binary Output
 ```bash
 cargo build --release

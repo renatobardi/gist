@@ -38,6 +38,16 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Interaction patterns documentation (validation, loading, WebSocket updates, graph interactions)
 - Design artifacts published in `_bmad/docs/design/` directory
 
+### Added
+
+#### Continuous Deployment (CD) Pipeline (2026-04-21)
+- Implemented GitHub Actions CD workflow (`.github/workflows/cd.yml`) for `knowledge-vault`.
+- Cross-compilation to `aarch64-unknown-linux-musl` target for Oracle Cloud ARM64 instances.
+- SSH deployment mechanism including backup, installation, and service restart (`systemctl`).
+- Post-deployment health check with exponential backoff (30 retries × 2s).
+- Documented rollback procedure.
+- Required secrets for CD workflow (DEPLOY_HOST, DEPLOY_USER, DEPLOY_PATH, DEPLOY_SSH_KEY) documented in README.
+
 ### Documentation
 - Added Design section to README with references to all design artifacts
 - Added API Reference section to README with authentication endpoints and security details
