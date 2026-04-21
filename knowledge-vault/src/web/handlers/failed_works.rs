@@ -333,16 +333,24 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
       });
     }
 
+    function findCard(workId) {
+      var cards = content.querySelectorAll('.failed-card');
+      for (var i = 0; i < cards.length; i++) {
+        if (cards[i].dataset.id === workId) return cards[i];
+      }
+      return null;
+    }
+
     function retryWork(id, btn) {
       btn.disabled = true;
       btn.textContent = 'Retrying…';
-      fetch('/api/works/' + id + '/retry', {
+      fetch('/api/works/' + encodeURIComponent(id) + '/retry', {
         method: 'POST',
         credentials: 'same-origin',
       })
       .then(function(res) {
         if (res.ok) {
-          var card = document.querySelector('.failed-card[data-id="' + id + '"]');
+          var card = findCard(id);
           if (card) {
             var actions = card.querySelector('.card-actions');
             if (actions) {
@@ -367,7 +375,7 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
     }
 
     function removeCard(workId) {
-      var card = document.querySelector('.failed-card[data-id="' + workId + '"]');
+      var card = findCard(workId);
       if (card) card.remove();
       failedWorks = failedWorks.filter(function(w) { return w.id !== workId; });
       updateCountBadge(failedWorks.length);
@@ -377,21 +385,42 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
       }
     }
 
+    function fetchAllWorks(callback) {
+      var PAGE = 200;
+      var offset = 0;
+      var all = [];
+      function next() {
+        fetch('/api/works?limit=' + PAGE + '&offset=' + offset, { credentials: 'same-origin' })
+          .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function(page) {
+            all = all.concat(page || []);
+            if (page && page.length === PAGE) {
+              offset += PAGE;
+              next();
+            } else {
+              callback(null, all);
+            }
+          })
+          .catch(function(err) { callback(err); });
+      }
+      next();
+    }
+
     function loadFailedWorks() {
-      fetch('/api/works?limit=200', { credentials: 'same-origin' })
-        .then(function(res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        })
-        .then(function(works) {
-          failedWorks = (works || []).filter(function(w) { return w.status === 'failed'; });
-          renderFailedWorks(failedWorks);
-          connectWs();
-        })
-        .catch(function(err) {
+      fetchAllWorks(function(err, works) {
+        if (err) {
           content.innerHTML =
-            '<div class="error-state" role="alert">Failed to load works: ' + escapeHtml(err.message) + '. <a href="/failed">Retry</a></div>';
-        });
+            '<div class="error-state" role="alert">Failed to load works: ' + escapeHtml(err.message) +
+            '. <button onclick="loadFailedWorks()" style="margin-left:0.5rem;background:none;border:none;color:#721c24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;">Retry</button></div>';
+          return;
+        }
+        failedWorks = (works || []).filter(function(w) { return w.status === 'failed'; });
+        renderFailedWorks(failedWorks);
+        connectWs();
+      });
     }
 
     var wsConnected = false;
