@@ -74,6 +74,24 @@ impl WorkRepo for SurrealWorkRepo {
             .map(|rec| record_to_work(rec, None)))
     }
 
+    async fn find_by_id(&self, id: &str) -> Result<Option<Work>, RepoError> {
+        let mut result = self
+            .db
+            .query("SELECT * FROM work WHERE id = type::thing('work', $id) LIMIT 1")
+            .bind(("id", id.to_string()))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let records: Vec<WorkRecord> = result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        Ok(records
+            .into_iter()
+            .next()
+            .map(|rec| record_to_work(rec, Some(id.to_string()))))
+    }
+
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError> {
         let work_id = Uuid::new_v4().to_string();
 
@@ -190,5 +208,26 @@ impl WorkRepo for SurrealWorkRepo {
         }
 
         Ok(())
+    }
+
+    async fn reset_to_pending(&self, id: &str) -> Result<Work, RepoError> {
+        let mut result = self
+            .db
+            .query(
+                "UPDATE type::thing('work', $id) SET status = 'pending', updated_at = time::now() WHERE status = 'failed' RETURN AFTER",
+            )
+            .bind(("id", id.to_string()))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let records: Vec<WorkRecord> = result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        records
+            .into_iter()
+            .next()
+            .map(|rec| record_to_work(rec, Some(id.to_string())))
+            .ok_or(RepoError::NotFound)
     }
 }

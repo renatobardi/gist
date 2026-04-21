@@ -41,6 +41,7 @@ pub trait TokenRepo: Send + Sync {
 #[async_trait::async_trait]
 pub trait WorkRepo: Send + Sync {
     async fn find_by_isbn(&self, isbn: &str) -> Result<Option<Work>, RepoError>;
+    async fn find_by_id(&self, id: &str) -> Result<Option<Work>, RepoError>;
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError>;
     async fn find_by_open_library_id(&self, ol_id: &str) -> Result<Option<Work>, RepoError>;
     async fn create_work_by_title(
@@ -57,6 +58,7 @@ pub trait WorkRepo: Send + Sync {
         status: &str,
         error_msg: Option<&str>,
     ) -> Result<(), RepoError>;
+    async fn reset_to_pending(&self, id: &str) -> Result<Work, RepoError>;
 }
 
 #[async_trait::async_trait]
