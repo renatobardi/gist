@@ -180,6 +180,7 @@ fn render_detail_page(work_id: &str) -> String {
       height: 4px;
       background: #e5e5e5;
       position: relative;
+      overflow: hidden;
     }}
     .relevance-bar-fill {{
       height: 100%;
@@ -323,7 +324,7 @@ fn render_detail_page(work_id: &str) -> String {
           insightHtml += '<p class="section-title">Extracted Concepts (' + sorted.length + ')</p>';
           insightHtml += '<div class="concept-grid">';
           sorted.forEach(function(c) {{
-            var pct = Math.round(c.relevance_weight * 100);
+            var pct = Math.min(100, Math.round(c.relevance_weight * 100));
             var domColor = renderDomainColor(c.domain);
             insightHtml += '<div class="concept-card">';
             insightHtml += '<p class="concept-name">' + esc(c.display_name) + '</p>';
@@ -334,6 +335,8 @@ fn render_detail_page(work_id: &str) -> String {
           }});
           insightHtml += '</div></div>';
         }}
+      }} else if (work.status === 'done') {{
+        insightHtml = '<p class="processing-notice">Insight data is not yet available for this book.</p>';
       }} else if (work.status === 'processing') {{
         insightHtml = '<p class="processing-notice">&#9203; Processing — extracting insights from this book. This page will update when ready.</p>';
       }} else if (work.status === 'pending') {{
