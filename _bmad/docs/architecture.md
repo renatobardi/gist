@@ -44,10 +44,25 @@
 | Client | `surrealdb` crate | 2.x | Official Rust SDK; supports embedded `Surreal::<SurrealKV>`. |
 | Migration tool | Hand-crafted SurrealQL startup script | — | SurrealDB 3.0 has no official migration tooling comparable to sqlx-migrate. The schema is small (5 tables, 3 edge types); startup `DEFINE IF NOT EXISTS` statements cover all cases. |
 
+**GraphWriteRepo Port**
+
+The `GraphWriteRepo` is a core `port` trait (interface) that defines the atomic graph persistence operation within the Knowledge Vault. Its primary responsibility is to ensure the all-or-nothing semantics of writing the complex graph structure associated with a processed work.
+
+The `GraphWriteRepo::write_graph_transaction` method orchestrates the following:
+- **Insight Node Creation:** Persists the extracted summary, key points, and raw Gemini response.
+- **`interpreta` Edge Creation:** Links the `work` to its `insight`.
+- **Concept Upserts:** Creates new concept nodes or reuses existing ones based on normalized names, preventing duplicates.
+- **`menciona` Edges Creation:** Connects the `insight` to all relevant `concept` nodes.
+- **`relacionado_a` Edges Creation:** Establishes relationships between related `concept` nodes as identified by Gemini.
+- **Work Status Update:** Transitions the `work` status to `'done'` upon successful completion.
+
+Crucially, this entire sequence is executed within a single `BEGIN TRANSACTION` / `COMMIT` block in SurrealQL, leveraging SurrealDB's ACID properties to guarantee that either all graph elements are successfully written, or none are. This prevents the database from entering an inconsistent state due to partial failures during the complex graph population process.
+
 **OQ-02 Resolution — Transaction semantics:**
 - **Decision:** Use `BEGIN TRANSACTION` / `COMMIT` in SurrealQL 3.0 for the atomic graph write sequence (FR-25).
 - **Rationale:** SurrealKV supports ACID transactions with `BEGIN TRANSACTION`. Individual statement atomicity is NOT sufficient for FR-25, which requires the entire sequence (concept upsert → menciona edge → relacionado_a edges → insight creation → interpreta edge → work status update) to succeed or roll back atomically (FR-25, US-13).
 - **Known trade-off:** SurrealDB 3.0 SurrealKV transaction isolation level must be validated during integration testing. Treat as highest-risk DB assumption; write a targeted integration test before implementing the worker pipeline.
+
 
 ### Messaging
 
@@ -206,6 +221,22 @@ Browser connects GET /ws (after login)
   → WebSocket frame pushed to all connected clients
   → Leptos reactive signal updated: status badge re-renders without page reload (FR-28)
 ```
+
+### Transactional Graph Write Flow
+
+To ensure data consistency and atomicity for graph persistence (FR-25), the worker pipeline encapsulates the entire sequence of concept upserts, edge creations, and work status updates within a single SurrealDB transaction. This atomic operation guarantees that either all changes are successfully committed, or if any step fails, the entire transaction is rolled back, preventing partial or inconsistent states in the knowledge graph.
+
+The sequence of operations performed within this transaction is as follows:
+
+1.  **CREATE `insight` Node:** The `insight` node, containing the summary, key points, and raw Gemini response, is persisted.
+2.  **CREATE `interpreta` Edge:** A relationship is created linking the `work` node to its corresponding `insight` node.
+3.  **UPSERT Concept Nodes:** Normalized concept nodes are created or updated, preventing duplicates based on their `name`.
+4.  **CREATE `menciona` Edges:** Relationships are established between the `insight` node and the `concept` nodes extracted from the book.
+5.  **CREATE `relacionado_a` Edges:** Connections between related `concept` nodes are established based on Gemini's output.
+6.  **UPDATE `work` Status:** The `work` record's status is updated to `'done'`, signifying successful processing.
+
+This entire block is executed within a `BEGIN TRANSACTION` and `COMMIT` statement in SurrealQL, ensuring atomicity (US-13) and preventing partial graph states. In the event of a failure at any point within this sequence, the transaction is automatically rolled back by SurrealDB, maintaining data integrity.
+
 
 ### Deployment Topology
 
