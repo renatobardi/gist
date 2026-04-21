@@ -180,7 +180,10 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
 <body>
   <header>
     <h1>Knowledge Vault</h1>
-    <a href="/add" class="add-btn" aria-label="Add a book to your vault">+ Add Book</a>
+    <div style="display:flex;align-items:center;gap:1.25rem;">
+      <a href="/failed" id="failed-nav-link" style="color:#8c8c8c;text-decoration:none;font-size:0.875rem;display:none;" aria-label="View failed works">Failed</a>
+      <a href="/add" class="add-btn" aria-label="Add a book to your vault">+ Add Book</a>
+    </div>
   </header>
   <main>
     <h2 class="page-title">Library</h2>
@@ -205,6 +208,19 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function updateFailedNav(works) {
+      var failedCount = (works || []).filter(function(w) { return w.status === 'failed'; }).length;
+      var link = document.getElementById('failed-nav-link');
+      if (!link) return;
+      if (failedCount > 0) {
+        link.textContent = 'Failed (' + failedCount + ')';
+        link.style.display = '';
+        link.style.color = '#dc3545';
+      } else {
+        link.style.display = 'none';
+      }
     }
 
     function renderBooks(works) {
@@ -319,6 +335,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
           return res.json();
         })
         .then(function(works) {
+          updateFailedNav(works);
           renderBooks(works);
           connectWs();
         })
