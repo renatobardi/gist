@@ -6,6 +6,19 @@ All notable changes to Knowledge Vault will be documented in this file.
 
 ### Added
 
+#### Health Check Endpoint (2026-04-21)
+- `GET /health` endpoint for service and database connectivity monitoring
+- HTTP 200 with `{status: "ok", version: "...", db: "connected"}` when database is reachable
+- HTTP 503 with `{status: "degraded", db: "disconnected"}` when database is unavailable
+- Supports deployment health checks and load balancer monitoring
+- No authentication required
+- Includes binary version from `CARGO_PKG_VERSION`
+- Database connectivity verified with non-blocking `RETURN 1` query
+- PR: [https://github.com/renatobardi/gist/pull/35](https://github.com/renatobardi/gist/pull/35)
+
+### Documentation
+- Added Health Check Endpoint section to README API Reference
+
 #### Transactional Graph Write Persistence (2026-04-21)
 - New `GraphWriteRepo` port trait for atomic graph write transactions.
 - Implementation using SurrealDB's `BEGIN TRANSACTION` / `COMMIT` to ensure all-or-nothing semantics for graph population (concept upserts, edge creations, insight persistence, and work status updates).
