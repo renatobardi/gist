@@ -109,6 +109,9 @@ impl InsightRepo for SurrealInsightRepo {
     }
 
     async fn get_for_work(&self, work_id: &str) -> Result<Option<InsightDetail>, RepoError> {
+        Uuid::parse_str(work_id)
+            .map_err(|_| RepoError::Internal(format!("invalid work_id format: {work_id}")))?;
+
         // Step 1: resolve the insight linked to this work via the interpreta edge
         let mut edge_result = self
             .db
