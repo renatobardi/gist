@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::local::Db, Surreal};
+use surrealdb::{engine::local::Db, sql::Thing, Surreal};
 use uuid::Uuid;
 
 use crate::{
@@ -44,41 +44,8 @@ impl SurrealConceptRepo {
     pub fn new(db: Surreal<Db>) -> Self {
         Self { db }
     }
-}
 
-#[async_trait]
-impl ConceptRepo for SurrealConceptRepo {
-    async fn upsert(&self, display_name: &str, description: &str, domain: &str) -> Result<Concept, RepoError> {
-        let normalized = normalize_name(display_name);
-
-        // Check for existing concept by normalized name first (first-write wins).
-        if let Some(existing) = self.find_by_name(&normalized).await? {
-            return Ok(existing);
-        }
-
-        let concept_id = Uuid::new_v4().to_string();
-        let record = ConceptRecord {
-            id: None,
-            name: normalized,
-            display_name: display_name.to_string(),
-            description: description.to_string(),
-            domain: domain.to_string(),
-            created_at: None,
-        };
-
-        let created: Option<ConceptRecord> = self
-            .db
-            .create(("concept", concept_id))
-            .content(record)
-            .await
-            .map_err(|e| RepoError::Internal(e.to_string()))?;
-
-        created
-            .map(record_to_concept)
-            .ok_or_else(|| RepoError::Internal("no concept record returned".into()))
-    }
-
-    async fn find_by_name(&self, normalized_name: &str) -> Result<Option<Concept>, RepoError> {
+    pub async fn find_by_name(&self, normalized_name: &str) -> Result<Option<Concept>, RepoError> {
         let mut result = self
             .db
             .query("SELECT * FROM concept WHERE name = $name LIMIT 1")
@@ -92,6 +59,43 @@ impl ConceptRepo for SurrealConceptRepo {
 
         Ok(records.into_iter().next().map(record_to_concept))
     }
+}
+
+#[async_trait]
+impl ConceptRepo for SurrealConceptRepo {
+    async fn upsert(&self, display_name: &str, description: &str, domain: &str) -> Result<Concept, RepoError> {
+        let normalized = normalize_name(display_name);
+
+        if let Some(existing) = self.find_by_name(&normalized).await? {
+            return Ok(existing);
+        }
+
+        let concept_id = Uuid::new_v4().to_string();
+        let record = ConceptRecord {
+            id: None,
+            name: normalized.clone(),
+            display_name: display_name.trim().to_string(),
+            description: description.to_string(),
+            domain: domain.to_string(),
+            created_at: None,
+        };
+
+        match self.db.create(("concept", concept_id)).content(record).await {
+            Ok(Some(rec)) => Ok(record_to_concept(rec)),
+            Ok(None) => Err(RepoError::Internal("no concept record returned".into())),
+            Err(e) => {
+                let msg = e.to_string();
+                // Concurrent upsert race: another caller won the UNIQUE index — return the winner.
+                if msg.contains("already exists") || msg.contains("unique") {
+                    self.find_by_name(&normalized).await?.ok_or_else(|| {
+                        RepoError::Internal("concept not found after unique conflict".into())
+                    })
+                } else {
+                    Err(RepoError::Internal(msg))
+                }
+            }
+        }
+    }
 
     async fn create_menciona_edge(
         &self,
@@ -99,10 +103,12 @@ impl ConceptRepo for SurrealConceptRepo {
         concept_id: &str,
         relevance_weight: f64,
     ) -> Result<(), RepoError> {
+        let insight = Thing::from(("insight", insight_id));
+        let concept = Thing::from(("concept", concept_id));
         self.db
             .query("RELATE $insight->menciona->$concept SET relevance_weight = $weight")
-            .bind(("insight", format!("insight:{insight_id}")))
-            .bind(("concept", format!("concept:{concept_id}")))
+            .bind(("insight", insight))
+            .bind(("concept", concept))
             .bind(("weight", relevance_weight))
             .await
             .map_err(|e| RepoError::Internal(e.to_string()))?;
@@ -116,10 +122,12 @@ impl ConceptRepo for SurrealConceptRepo {
         relation_type: &str,
         strength: f64,
     ) -> Result<(), RepoError> {
+        let from = Thing::from(("concept", from_concept_id));
+        let to = Thing::from(("concept", to_concept_id));
         self.db
             .query("RELATE $from->relacionado_a->$to SET relation_type = $rtype, strength = $strength")
-            .bind(("from", format!("concept:{from_concept_id}")))
-            .bind(("to", format!("concept:{to_concept_id}")))
+            .bind(("from", from))
+            .bind(("to", to))
             .bind(("rtype", relation_type.to_string()))
             .bind(("strength", strength))
             .await

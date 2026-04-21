@@ -51,7 +51,6 @@ pub trait ConceptRepo: Send + Sync {
     /// Upsert a concept by normalized name. First-write wins: if the name already exists,
     /// the existing record is returned without modification.
     async fn upsert(&self, display_name: &str, description: &str, domain: &str) -> Result<Concept, RepoError>;
-    async fn find_by_name(&self, normalized_name: &str) -> Result<Option<Concept>, RepoError>;
     /// Create a menciona edge from an insight to a concept with a relevance weight.
     async fn create_menciona_edge(
         &self,

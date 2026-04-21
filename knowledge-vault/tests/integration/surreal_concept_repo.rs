@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use serde::Deserialize;
 use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
@@ -110,7 +111,7 @@ async fn create_insight_persists_record() {
 async fn create_interpreta_edge_links_work_to_insight() {
     let db = make_db().await;
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
-    let insight_repo = Arc::new(SurrealInsightRepo::new(db));
+    let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
 
     let work = work_repo.create_work("9780132350884").await.unwrap();
     let insight = insight_repo
@@ -118,18 +119,23 @@ async fn create_interpreta_edge_links_work_to_insight() {
         .await
         .unwrap();
 
-    // Should not return an error.
     insight_repo
         .create_interpreta_edge(&work.id, &insight.id)
         .await
         .unwrap();
+
+    #[derive(Deserialize)]
+    struct Edge { #[allow(dead_code)] id: Option<surrealdb::sql::Thing> }
+    let mut result = db.query("SELECT * FROM interpreta").await.unwrap();
+    let edges: Vec<Edge> = result.take(0).unwrap();
+    assert_eq!(edges.len(), 1, "expected one interpreta edge");
 }
 
 #[tokio::test]
 async fn create_menciona_edge_links_insight_to_concept_with_weight() {
     let db = make_db().await;
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let insight_repo = Arc::new(SurrealInsightRepo::new(db));
+    let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
 
     let insight = insight_repo
         .create("Summary", vec![], "{}")
@@ -144,12 +150,19 @@ async fn create_menciona_edge_links_insight_to_concept_with_weight() {
         .create_menciona_edge(&insight.id, &concept.id, 0.85)
         .await
         .unwrap();
+
+    #[derive(Deserialize)]
+    struct MencianaEdge { relevance_weight: f64 }
+    let mut result = db.query("SELECT relevance_weight FROM menciona").await.unwrap();
+    let edges: Vec<MencianaEdge> = result.take(0).unwrap();
+    assert_eq!(edges.len(), 1);
+    assert!((edges[0].relevance_weight - 0.85).abs() < 1e-9, "relevance_weight mismatch");
 }
 
 #[tokio::test]
 async fn create_relacionado_a_edge_links_concepts_with_type_and_strength() {
     let db = make_db().await;
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
 
     let concept_a = concept_repo
         .upsert("Clean Code", "Readable code practices", "Software Engineering")
@@ -164,6 +177,14 @@ async fn create_relacionado_a_edge_links_concepts_with_type_and_strength() {
         .create_relacionado_a_edge(&concept_a.id, &concept_b.id, "enables", 0.75)
         .await
         .unwrap();
+
+    #[derive(Deserialize)]
+    struct RelacionadoAEdge { relation_type: String, strength: f64 }
+    let mut result = db.query("SELECT relation_type, strength FROM relacionado_a").await.unwrap();
+    let edges: Vec<RelacionadoAEdge> = result.take(0).unwrap();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].relation_type, "enables");
+    assert!((edges[0].strength - 0.75).abs() < 1e-9, "strength mismatch");
 }
 
 #[tokio::test]
@@ -177,5 +198,5 @@ async fn upsert_with_mixed_case_display_name_normalizes_correctly() {
         .unwrap();
 
     assert_eq!(concept.name, "solid principles");
-    assert_eq!(concept.display_name, "  SOLID Principles  ");
+    assert_eq!(concept.display_name, "SOLID Principles");
 }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::local::Db, Surreal};
+use surrealdb::{engine::local::Db, sql::Thing, Surreal};
 use uuid::Uuid;
 
 use crate::{
@@ -74,10 +74,12 @@ impl InsightRepo for SurrealInsightRepo {
     }
 
     async fn create_interpreta_edge(&self, work_id: &str, insight_id: &str) -> Result<(), RepoError> {
+        let work = Thing::from(("work", work_id));
+        let insight = Thing::from(("insight", insight_id));
         self.db
             .query("RELATE $work->interpreta->$insight")
-            .bind(("work", format!("work:{work_id}")))
-            .bind(("insight", format!("insight:{insight_id}")))
+            .bind(("work", work))
+            .bind(("insight", insight))
             .await
             .map_err(|e| RepoError::Internal(e.to_string()))?;
         Ok(())
