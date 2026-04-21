@@ -104,7 +104,10 @@ async fn get_failed_works_contains_key_elements() {
     let body = res.text();
     assert!(body.contains("Failed Works"), "missing page title");
     assert!(body.contains("/api/works"), "missing works API reference");
-    assert!(body.contains("retry"), "missing retry functionality reference");
+    assert!(
+        body.contains("retry"),
+        "missing retry functionality reference"
+    );
     assert!(body.contains("error"), "missing error display reference");
 }
 
@@ -119,7 +122,10 @@ async fn get_failed_works_has_accessibility_attributes() {
     let body = res.text();
     assert!(body.contains("aria-label"), "missing aria-label");
     assert!(body.contains("aria-live"), "missing aria-live");
-    assert!(body.contains("role=\"alert\""), "missing role=alert on error box");
+    assert!(
+        body.contains("role=\"alert\""),
+        "missing role=alert on error box"
+    );
 }
 
 #[tokio::test]
@@ -175,5 +181,8 @@ async fn get_failed_works_has_failed_badge_style() {
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains("badge-failed") || body.contains("dc3545"), "missing failed status styling");
+    assert!(
+        body.contains("badge-failed") || body.contains("dc3545"),
+        "missing failed status styling"
+    );
 }

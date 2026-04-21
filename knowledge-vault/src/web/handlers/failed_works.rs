@@ -1,6 +1,6 @@
 use axum::{
-    response::{Html, IntoResponse, Redirect, Response},
     extract::State,
+    response::{Html, IntoResponse, Redirect, Response},
 };
 
 use crate::web::{middleware::auth::AuthenticatedUser, state::AppState};
