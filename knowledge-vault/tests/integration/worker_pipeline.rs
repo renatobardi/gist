@@ -205,7 +205,10 @@ async fn graph_write_transaction_is_idempotent_for_same_work() {
         .await
         .unwrap();
     let counts: Vec<Count> = r.take(0).unwrap();
-    assert_eq!(counts[0].count, 1, "duplicate menciona edge created on second call");
+    assert_eq!(
+        counts[0].count, 1,
+        "duplicate menciona edge created on second call"
+    );
 
     // Only one concept node should exist
     let mut r = db
@@ -213,7 +216,10 @@ async fn graph_write_transaction_is_idempotent_for_same_work() {
         .await
         .unwrap();
     let counts: Vec<Count> = r.take(0).unwrap();
-    assert_eq!(counts[0].count, 1, "duplicate concept created on second call");
+    assert_eq!(
+        counts[0].count, 1,
+        "duplicate concept created on second call"
+    );
 }
 
 /// Marks a work as failed when a permanent error occurs (no transaction involved — just status).
