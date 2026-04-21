@@ -228,11 +228,11 @@ To ensure data consistency and atomicity for graph persistence (FR-25), the work
 
 The sequence of operations performed within this transaction is as follows:
 
-1.  **UPSERT Concept Nodes:** Normalized concept nodes are created or updated, preventing duplicates based on their `name`.
-2.  **CREATE `menciona` Edges:** Relationships are established between the `insight` node and the `concept` nodes extracted from the book.
-3.  **CREATE `relacionado_a` Edges:** Connections between related `concept` nodes are established based on Gemini's output.
-4.  **CREATE `insight` Node:** The `insight` node, containing the summary, key points, and raw Gemini response, is persisted.
-5.  **CREATE `interpreta` Edge:** A relationship is created linking the `work` node to its corresponding `insight` node.
+1.  **CREATE `insight` Node:** The `insight` node, containing the summary, key points, and raw Gemini response, is persisted.
+2.  **CREATE `interpreta` Edge:** A relationship is created linking the `work` node to its corresponding `insight` node.
+3.  **UPSERT Concept Nodes:** Normalized concept nodes are created or updated, preventing duplicates based on their `name`.
+4.  **CREATE `menciona` Edges:** Relationships are established between the `insight` node and the `concept` nodes extracted from the book.
+5.  **CREATE `relacionado_a` Edges:** Connections between related `concept` nodes are established based on Gemini's output.
 6.  **UPDATE `work` Status:** The `work` record's status is updated to `'done'`, signifying successful processing.
 
 This entire block is executed within a `BEGIN TRANSACTION` and `COMMIT` statement in SurrealQL, ensuring atomicity (US-13) and preventing partial graph states. In the event of a failure at any point within this sequence, the transaction is automatically rolled back by SurrealDB, maintaining data integrity.

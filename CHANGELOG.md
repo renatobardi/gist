@@ -12,8 +12,6 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Guarantees data consistency by rolling back the entire operation if any step fails.
 - PR: [https://github.com/renatobardi/gist/pull/31](https://github.com/renatobardi/gist/pull/31)
 
-### Added
-
 #### Submit Book by ISBN (2026-04-21)
 - `POST /api/works` endpoint: accepts ISBN-10 or ISBN-13 for book submission
 - Automatic metadata fetching from Open Library API
