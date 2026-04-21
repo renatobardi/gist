@@ -328,6 +328,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
     var panStart = { x: 0, y: 0 };
     var dragNode = null;
     var dragOffset = { x: 0, y: 0 };
+    var hasDragged = false;
     var hoveredNode = null;
 
     var NODE_W = 120, NODE_H = 36;
@@ -575,6 +576,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
       var hit = hitTest(w.x, w.y);
       if (hit) {
         dragNode = hit;
+        hasDragged = false;
         dragOffset.x = hit.x - w.x;
         dragOffset.y = hit.y - w.y;
         canvas.classList.add('node-drag');
@@ -592,6 +594,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
       var cy = e.clientY - rect.top;
 
       if (dragNode) {
+        hasDragged = true;
         var w = canvasToWorld(cx, cy);
         dragNode.x = w.x + dragOffset.x;
         dragNode.y = w.y + dragOffset.y;
@@ -626,29 +629,14 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
       }
     });
 
-    canvas.addEventListener('mouseup', function(e) {
-      var wasDrag = !!dragNode;
-      var wasPan = isPanning;
+    canvas.addEventListener('mouseup', function() {
       dragNode = null;
       isPanning = false;
       canvas.classList.remove('dragging', 'node-drag');
-
-      if (!wasDrag && !wasPan) return;
-      if (wasDrag) {
-        // check if it was actually a click (no movement)
-        var rect = canvas.getBoundingClientRect();
-        var cx = e.clientX - rect.left;
-        var cy = e.clientY - rect.top;
-        var w = canvasToWorld(cx, cy);
-        var hit = hitTest(w.x, w.y);
-        if (hit) {
-          window.location.href = '/graph/concepts/' + encodeURIComponent(hit.id);
-        }
-      }
     });
 
     canvas.addEventListener('click', function(e) {
-      if (dragNode || isPanning) return;
+      if (hasDragged || isPanning) { hasDragged = false; return; }
       var rect = canvas.getBoundingClientRect();
       var cx = e.clientX - rect.left;
       var cy = e.clientY - rect.top;
@@ -664,6 +652,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
       tooltip.style.display = 'none';
       isPanning = false;
       dragNode = null;
+      hasDragged = false;
       canvas.classList.remove('dragging', 'node-drag');
     });
 

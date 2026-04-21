@@ -63,9 +63,9 @@ struct RelatedRow {
 impl GraphReadRepo for SurrealGraphReadRepo {
     async fn get_graph(&self, domains: Option<Vec<String>>) -> Result<GraphData, RepoError> {
         let node_sql = if domains.is_some() {
-            "SELECT id, name, display_name, description, domain FROM concept WHERE domain IN $domains"
+            "SELECT id, name, display_name, domain FROM concept WHERE domain IN $domains"
         } else {
-            "SELECT id, name, display_name, description, domain FROM concept"
+            "SELECT id, name, display_name, domain FROM concept"
         };
 
         let mut q = self.db.query(node_sql);
@@ -196,15 +196,24 @@ impl GraphReadRepo for SurrealGraphReadRepo {
                 .take(0)
                 .map_err(|e| RepoError::Internal(e.to_string()))?;
 
+            let mut seen_work_ids = std::collections::HashSet::new();
             work_rows
                 .into_iter()
                 .filter_map(|r| {
-                    r.work_id.map(|t| ConceptBook {
-                        work_id: thing_to_uuid(t),
-                        title: r.title,
-                        author: r.author,
+                    r.work_id.map(|t| {
+                        let work_id = thing_to_uuid(t);
+                        if seen_work_ids.insert(work_id.clone()) {
+                            Some(ConceptBook {
+                                work_id,
+                                title: r.title,
+                                author: r.author,
+                            })
+                        } else {
+                            None
+                        }
                     })
                 })
+                .flatten()
                 .collect()
         };
 
