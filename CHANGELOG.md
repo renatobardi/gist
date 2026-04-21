@@ -6,6 +6,14 @@ All notable changes to Knowledge Vault will be documented in this file.
 
 ### Added
 
+#### Transactional Graph Write Persistence (2026-04-21)
+- New `GraphWriteRepo` port trait for atomic graph write transactions.
+- Implementation using SurrealDB's `BEGIN TRANSACTION` / `COMMIT` to ensure all-or-nothing semantics for graph population (concept upserts, edge creations, insight persistence, and work status updates).
+- Guarantees data consistency by rolling back the entire operation if any step fails.
+- PR: [https://github.com/renatobardi/gist/pull/31](https://github.com/renatobardi/gist/pull/31)
+
+### Added
+
 #### Submit Book by ISBN (2026-04-21)
 - `POST /api/works` endpoint: accepts ISBN-10 or ISBN-13 for book submission
 - Automatic metadata fetching from Open Library API
