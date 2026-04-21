@@ -8,9 +8,10 @@ use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
-        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
-        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
-        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
+        concept_repo::SurrealConceptRepo, graph_write_repo::SurrealGraphWriteRepo,
+        insight_repo::SurrealInsightRepo, login_attempt_repo::SurrealLoginAttemptRepo,
+        schema::run_migrations, token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
+        work_repo::SurrealWorkRepo,
     },
     ports::{
         external::{BookMetadata, ExternalError, OpenLibraryBook, OpenLibraryPort},
@@ -75,7 +76,8 @@ async fn make_test_server_with_nats() -> TestServer {
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
@@ -83,6 +85,7 @@ async fn make_test_server_with_nats() -> TestServer {
         work_repo,
         insight_repo,
         concept_repo,
+        graph_write_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: None,
         ws_broadcaster: WsBroadcaster::new(),
@@ -100,7 +103,8 @@ async fn make_test_server_no_nats() -> TestServer {
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
@@ -108,6 +112,7 @@ async fn make_test_server_no_nats() -> TestServer {
         work_repo,
         insight_repo,
         concept_repo,
+        graph_write_repo,
         message_publisher: None,
         open_library_client: None,
         ws_broadcaster: WsBroadcaster::new(),
@@ -125,7 +130,8 @@ async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> Te
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
@@ -133,6 +139,7 @@ async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> Te
         work_repo,
         insight_repo,
         concept_repo,
+        graph_write_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(MockOpenLibraryClient { result: ol_result })),
         ws_broadcaster: WsBroadcaster::new(),
@@ -389,7 +396,8 @@ async fn post_works_open_library_error_returns_500() {
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
@@ -397,6 +405,7 @@ async fn post_works_open_library_error_returns_500() {
         work_repo,
         insight_repo,
         concept_repo,
+        graph_write_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(ErrorOpenLibraryClient)),
         ws_broadcaster: WsBroadcaster::new(),

@@ -1,73 +1,19 @@
-/// Integration test for the worker pipeline logic.
+/// Integration tests for the worker pipeline logic (S02-09).
 ///
-/// Since NATS JetStream may not be running in CI, this test validates the
-/// pipeline using in-process SurrealKV (Mem engine) and stub implementations
-/// of the external ports.
+/// Validates the transactional graph write using in-process SurrealKV (Mem engine)
+/// and stub implementations of the external ports.
 use std::sync::Arc;
 
-use async_trait::async_trait;
+use serde::Deserialize;
 use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
-        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo, schema::run_migrations,
-        work_repo::SurrealWorkRepo,
+        graph_write_repo::SurrealGraphWriteRepo, schema::run_migrations, work_repo::SurrealWorkRepo,
     },
-    domain::insight::{ExtractedConcept, GeminiResponse},
-    ports::{
-        external::{BookMetadata, ExternalError, GeminiPort, OpenLibraryBook, OpenLibraryPort},
-        repository::{ConceptRepo, InsightRepo, WorkRepo},
-    },
+    domain::insight::{ExtractedConcept, GeminiResponse, RelatedConceptRef},
+    ports::repository::{GraphWriteRepo, WorkRepo},
 };
-
-// ---- Stubs ----
-
-struct StubOpenLibrary;
-
-#[async_trait]
-impl OpenLibraryPort for StubOpenLibrary {
-    async fn search_by_title(&self, _title: &str) -> Result<Option<OpenLibraryBook>, String> {
-        Ok(None)
-    }
-
-    async fn fetch_by_isbn(&self, _isbn: &str) -> Result<BookMetadata, ExternalError> {
-        Ok(BookMetadata {
-            title: "Clean Code".to_string(),
-            author: "Robert C. Martin".to_string(),
-            description: "A handbook of agile software craftsmanship.".to_string(),
-            subjects: vec![
-                "Software engineering".to_string(),
-                "Programming".to_string(),
-            ],
-        })
-    }
-}
-
-struct StubGemini;
-
-#[async_trait]
-impl GeminiPort for StubGemini {
-    async fn extract_concepts(
-        &self,
-        _metadata: &BookMetadata,
-    ) -> Result<GeminiResponse, ExternalError> {
-        Ok(GeminiResponse {
-            summary: "A book about writing clean, maintainable code.".to_string(),
-            key_points: vec![
-                "Meaningful names".to_string(),
-                "Small functions".to_string(),
-            ],
-            concepts: vec![ExtractedConcept {
-                name: "clean code".to_string(),
-                display_name: "Clean Code".to_string(),
-                description: "Code that is easy to read and maintain.".to_string(),
-                domain: "Software Engineering".to_string(),
-                relevance_weight: 0.9,
-                related_concepts: vec![],
-            }],
-        })
-    }
-}
 
 // ---- Helper ----
 
@@ -79,62 +25,182 @@ async fn make_db() -> surrealdb::Surreal<surrealdb::engine::local::Db> {
     db
 }
 
+fn stub_gemini_response() -> GeminiResponse {
+    GeminiResponse {
+        summary: "A book about writing clean, maintainable code.".to_string(),
+        key_points: vec![
+            "Meaningful names".to_string(),
+            "Small functions".to_string(),
+        ],
+        concepts: vec![ExtractedConcept {
+            name: "clean code".to_string(),
+            display_name: "Clean Code".to_string(),
+            description: "Code that is easy to read and maintain.".to_string(),
+            domain: "Software Engineering".to_string(),
+            relevance_weight: 0.9,
+            related_concepts: vec![],
+        }],
+    }
+}
+
 // ---- Tests ----
 
+/// Happy path: write_graph_transaction commits insight, edges, concepts, and sets work = done.
 #[tokio::test]
-async fn worker_pipeline_processes_work_and_updates_status_to_done() {
+async fn graph_write_transaction_commits_all_data_atomically() {
     let db = make_db().await;
 
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
-    let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
-    let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let openlib: Arc<dyn OpenLibraryPort> = Arc::new(StubOpenLibrary);
-    let gemini: Arc<dyn GeminiPort> = Arc::new(StubGemini);
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
 
-    // Create a work record
     let work = work_repo.create_work("9780132350884").await.unwrap();
     assert_eq!(work.status, "pending");
 
-    // Simulate the pipeline steps
     work_repo
         .update_status(&work.id, "processing", None)
         .await
         .unwrap();
 
-    let isbn = work.isbn.as_deref().unwrap_or_default();
-    let metadata = openlib.fetch_by_isbn(isbn).await.unwrap();
-    let gemini_resp = gemini.extract_concepts(&metadata).await.unwrap();
+    let gemini_resp = stub_gemini_response();
 
-    let raw_json = serde_json::to_string(&gemini_resp).unwrap();
-
-    let insight_id = insight_repo
-        .create_insight(
-            &work.id,
-            &gemini_resp.summary,
-            gemini_resp.key_points.clone(),
-            &raw_json,
-        )
+    graph_write_repo
+        .write_graph_transaction(&work.id, &gemini_resp)
         .await
         .unwrap();
 
-    assert!(!insight_id.is_empty());
+    // Work status must be "done" after the transaction
+    let updated = work_repo.find_by_id(&work.id).await.unwrap().unwrap();
+    assert_eq!(updated.status, "done");
 
-    concept_repo
-        .upsert_and_link(&work.id, &insight_id, gemini_resp.concepts)
+    // Insight node must exist
+    #[derive(Deserialize)]
+    struct InsightRow {
+        summary: String,
+    }
+    let mut r = db.query("SELECT summary FROM insight").await.unwrap();
+    let insights: Vec<InsightRow> = r.take(0).unwrap();
+    assert_eq!(insights.len(), 1);
+    assert_eq!(insights[0].summary, gemini_resp.summary);
+
+    // interpreta edge must exist
+    #[derive(Deserialize)]
+    struct EdgeRow {
+        #[allow(dead_code)]
+        id: Option<surrealdb::sql::Thing>,
+    }
+    let mut r = db.query("SELECT id FROM interpreta").await.unwrap();
+    let edges: Vec<EdgeRow> = r.take(0).unwrap();
+    assert_eq!(edges.len(), 1, "interpreta edge missing");
+
+    // Concept node must exist
+    #[derive(Deserialize)]
+    struct ConceptRow {
+        name: String,
+    }
+    let mut r = db.query("SELECT name FROM concept").await.unwrap();
+    let concepts: Vec<ConceptRow> = r.take(0).unwrap();
+    assert_eq!(concepts.len(), 1);
+    assert_eq!(concepts[0].name, "clean code");
+
+    // menciona edge must exist with correct weight
+    #[derive(Deserialize)]
+    struct MencianaRow {
+        relevance_weight: f64,
+    }
+    let mut r = db
+        .query("SELECT relevance_weight FROM menciona")
         .await
         .unwrap();
-
-    work_repo
-        .update_status(&work.id, "done", None)
-        .await
-        .unwrap();
-
-    // Verify final status
-    let updated = work_repo.find_by_id(&work.id).await.unwrap();
-    assert!(updated.is_some());
-    assert_eq!(updated.unwrap().status, "done");
+    let menciona: Vec<MencianaRow> = r.take(0).unwrap();
+    assert_eq!(menciona.len(), 1);
+    assert!((menciona[0].relevance_weight - 0.9).abs() < 1e-9);
 }
 
+/// The transaction writes relacionado_a edges for related concepts.
+#[tokio::test]
+async fn graph_write_transaction_creates_relacionado_a_edges() {
+    let db = make_db().await;
+
+    let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
+
+    let work = work_repo.create_work("9780132350884").await.unwrap();
+
+    let gemini_resp = GeminiResponse {
+        summary: "Summary".to_string(),
+        key_points: vec![],
+        concepts: vec![ExtractedConcept {
+            name: "clean code".to_string(),
+            display_name: "Clean Code".to_string(),
+            description: "Readable code".to_string(),
+            domain: "Software Engineering".to_string(),
+            relevance_weight: 0.9,
+            related_concepts: vec![RelatedConceptRef {
+                name: "Refactoring".to_string(),
+                relation_type: "enables".to_string(),
+                strength: 0.75,
+            }],
+        }],
+    };
+
+    graph_write_repo
+        .write_graph_transaction(&work.id, &gemini_resp)
+        .await
+        .unwrap();
+
+    #[derive(Deserialize)]
+    struct RelEdge {
+        relation_type: String,
+        strength: f64,
+    }
+    let mut r = db
+        .query("SELECT relation_type, strength FROM relacionado_a")
+        .await
+        .unwrap();
+    let edges: Vec<RelEdge> = r.take(0).unwrap();
+    assert_eq!(edges.len(), 1);
+    assert_eq!(edges[0].relation_type, "enables");
+    assert!((edges[0].strength - 0.75).abs() < 1e-9);
+}
+
+/// Repeated calls for the same work are idempotent (insight idempotency is guaranteed by
+/// InsightRepo; here we verify the transaction itself succeeds twice without duplicate insights).
+#[tokio::test]
+async fn graph_write_transaction_is_idempotent_for_same_work() {
+    let db = make_db().await;
+
+    let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
+
+    let work = work_repo.create_work("9780132350884").await.unwrap();
+    let gemini_resp = stub_gemini_response();
+
+    // First call
+    graph_write_repo
+        .write_graph_transaction(&work.id, &gemini_resp)
+        .await
+        .unwrap();
+
+    // Second call for the same work — must not panic or produce duplicates
+    let result = graph_write_repo
+        .write_graph_transaction(&work.id, &gemini_resp)
+        .await;
+    assert!(result.is_ok(), "second call should not error: {result:?}");
+
+    // Only one insight node should exist
+    #[derive(Deserialize)]
+    struct Count {
+        count: u64,
+    }
+    let mut r = db
+        .query("SELECT count() AS count FROM insight GROUP ALL")
+        .await
+        .unwrap();
+    let counts: Vec<Count> = r.take(0).unwrap();
+    assert_eq!(counts[0].count, 1, "duplicate insight created");
+}
+
+/// Marks a work as failed when a permanent error occurs (no transaction involved — just status).
 #[tokio::test]
 async fn worker_pipeline_marks_work_failed_on_permanent_error() {
     let db = make_db().await;
@@ -142,7 +208,6 @@ async fn worker_pipeline_marks_work_failed_on_permanent_error() {
 
     let work = work_repo.create_work("9780132350884").await.unwrap();
 
-    // Simulate a permanent failure
     work_repo
         .update_status(&work.id, "failed", Some("ISBN not found in OpenLibrary"))
         .await

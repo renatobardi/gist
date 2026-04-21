@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::ports::external::OpenLibraryPort;
 use crate::ports::messaging::MessagePublisher;
 use crate::ports::repository::{
-    ConceptRepo, InsightRepo, LoginAttemptRepo, TokenRepo, UserRepo, WorkRepo,
+    ConceptRepo, GraphWriteRepo, InsightRepo, LoginAttemptRepo, TokenRepo, UserRepo, WorkRepo,
 };
 use crate::web::ws_broadcaster::WsBroadcaster;
 
@@ -15,6 +15,7 @@ pub struct AppState {
     pub work_repo: Arc<dyn WorkRepo>,
     pub insight_repo: Arc<dyn InsightRepo>,
     pub concept_repo: Arc<dyn ConceptRepo>,
+    pub graph_write_repo: Arc<dyn GraphWriteRepo>,
     pub message_publisher: Option<Arc<dyn MessagePublisher>>,
     pub open_library_client: Option<Arc<dyn OpenLibraryPort>>,
     pub ws_broadcaster: Arc<WsBroadcaster>,

@@ -8,9 +8,10 @@ use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
-        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
-        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
-        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
+        concept_repo::SurrealConceptRepo, graph_write_repo::SurrealGraphWriteRepo,
+        insight_repo::SurrealInsightRepo, login_attempt_repo::SurrealLoginAttemptRepo,
+        schema::run_migrations, token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
+        work_repo::SurrealWorkRepo,
     },
     ports::messaging::MessagePublisher,
     web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
@@ -36,7 +37,8 @@ async fn make_test_server() -> TestServer {
         token_repo: Arc::new(SurrealTokenRepo::new(db.clone())),
         work_repo: Arc::new(SurrealWorkRepo::new(db.clone())),
         insight_repo: Arc::new(SurrealInsightRepo::new(db.clone())),
-        concept_repo: Arc::new(SurrealConceptRepo::new(db)),
+        concept_repo: Arc::new(SurrealConceptRepo::new(db.clone())),
+        graph_write_repo: Arc::new(SurrealGraphWriteRepo::new(db)),
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: None,
         ws_broadcaster: WsBroadcaster::new(),
