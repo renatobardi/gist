@@ -8,6 +8,7 @@ use super::{
     handlers::{
         add_book::get_add_book,
         auth::post_login,
+        failed_works::get_failed_works,
         health::get_health,
         library::get_library,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
@@ -35,6 +36,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/works/{id}/retry", post(post_works_retry))
         .route("/api/works/{id}/insight", get(get_work_insight))
         .route("/works/{id}", get(get_work_detail_page))
+        .route("/failed", get(get_failed_works))
         .route("/ws", get(ws_handler))
         .route("/add", get(get_add_book))
         .route("/", get(get_library))
