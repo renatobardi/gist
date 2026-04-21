@@ -56,6 +56,34 @@ impl SurrealWorkRepo {
 
 #[async_trait]
 impl WorkRepo for SurrealWorkRepo {
+    async fn find_by_id(&self, work_id: &str) -> Result<Option<Work>, RepoError> {
+        let record: Option<WorkRecord> = self
+            .db
+            .select(("work", work_id))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        Ok(record.map(|rec| record_to_work(rec, Some(work_id.to_string()))))
+    }
+
+    async fn update_status(
+        &self,
+        work_id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError> {
+        self.db
+            .query(
+                "UPDATE type::thing('work', $id) SET status = $status, error_msg = $error_msg, updated_at = time::now()",
+            )
+            .bind(("id", work_id.to_string()))
+            .bind(("status", status.to_string()))
+            .bind(("error_msg", error_msg.map(|s| s.to_string())))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
     async fn find_by_isbn(&self, isbn: &str) -> Result<Option<Work>, RepoError> {
         let mut result = self
             .db
@@ -72,24 +100,6 @@ impl WorkRepo for SurrealWorkRepo {
             .into_iter()
             .next()
             .map(|rec| record_to_work(rec, None)))
-    }
-
-    async fn find_by_id(&self, id: &str) -> Result<Option<Work>, RepoError> {
-        let mut result = self
-            .db
-            .query("SELECT * FROM work WHERE id = type::thing('work', $id) LIMIT 1")
-            .bind(("id", id.to_string()))
-            .await
-            .map_err(|e| RepoError::Internal(e.to_string()))?;
-
-        let records: Vec<WorkRecord> = result
-            .take(0)
-            .map_err(|e| RepoError::Internal(e.to_string()))?;
-
-        Ok(records
-            .into_iter()
-            .next()
-            .map(|rec| record_to_work(rec, Some(id.to_string()))))
     }
 
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError> {

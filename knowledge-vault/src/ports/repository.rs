@@ -1,3 +1,4 @@
+use crate::domain::insight::ExtractedConcept;
 use crate::domain::user::{PersonalAccessToken, User};
 use crate::domain::work::Work;
 
@@ -58,7 +59,34 @@ pub trait WorkRepo: Send + Sync {
         status: &str,
         error_msg: Option<&str>,
     ) -> Result<(), RepoError>;
+    async fn update_status(
+        &self,
+        work_id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError>;
     async fn reset_to_pending(&self, id: &str) -> Result<Work, RepoError>;
+}
+
+#[async_trait::async_trait]
+pub trait InsightRepo: Send + Sync {
+    async fn create_insight(
+        &self,
+        work_id: &str,
+        summary: &str,
+        key_points: Vec<String>,
+        raw_json: &str,
+    ) -> Result<String, RepoError>;
+}
+
+#[async_trait::async_trait]
+pub trait ConceptRepo: Send + Sync {
+    async fn upsert_and_link(
+        &self,
+        work_id: &str,
+        insight_id: &str,
+        concepts: Vec<ExtractedConcept>,
+    ) -> Result<(), RepoError>;
 }
 
 #[async_trait::async_trait]
