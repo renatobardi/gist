@@ -597,9 +597,7 @@ async fn post_works_retry_unknown_work_returns_404() {
 async fn post_works_retry_without_auth_returns_401() {
     let (server, work_id) = make_test_server_with_failed_work().await;
 
-    let resp = server
-        .post(&format!("/api/works/{work_id}/retry"))
-        .await;
+    let resp = server.post(&format!("/api/works/{work_id}/retry")).await;
 
     resp.assert_status(StatusCode::UNAUTHORIZED);
 }

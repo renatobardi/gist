@@ -220,3 +220,15 @@ async fn reset_to_pending_updates_work_status() {
     assert_eq!(reset.id, created.id);
     assert_eq!(reset.status, "pending");
 }
+
+#[tokio::test]
+async fn reset_to_pending_returns_not_found_for_non_failed_work() {
+    let repo = make_repo().await;
+    let created = repo.create_work("9780132350884").await.unwrap();
+
+    let result = repo.reset_to_pending(&created.id).await;
+    assert!(matches!(
+        result,
+        Err(knowledge_vault::ports::repository::RepoError::NotFound)
+    ));
+}
