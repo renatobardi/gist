@@ -1,5 +1,5 @@
 use axum::{
-    extract::{FromRequestParts, State},
+    extract::State,
     response::{Html, IntoResponse, Redirect, Response},
 };
 
@@ -7,11 +7,10 @@ use crate::web::{middleware::auth::AuthenticatedUser, state::AppState};
 
 pub async fn get_library(
     State(state): State<AppState>,
-    req: axum::http::Request<axum::body::Body>,
+    auth: Result<AuthenticatedUser, Response>,
 ) -> Response {
-    let (mut parts, _body) = req.into_parts();
-    match AuthenticatedUser::from_request_parts(&mut parts, &state).await {
-        Ok(_auth) => Html(LIBRARY_HTML).into_response(),
+    match auth {
+        Ok(_) => Html(LIBRARY_HTML).into_response(),
         Err(_) => match state.user_repo.count().await {
             Ok(0) => Redirect::to("/setup").into_response(),
             _ => Redirect::to("/login").into_response(),
