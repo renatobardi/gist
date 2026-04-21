@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use surrealdb::{engine::local::Db, sql::Thing, Surreal};
 use uuid::Uuid;
 
+use crate::domain::insight::{ConceptWithWeight, InsightDetail};
 use crate::ports::repository::{InsightRepo, RepoError};
 
 fn thing_id_to_string(thing: Thing) -> String {
@@ -39,6 +40,20 @@ struct InsightRecord {
     summary: String,
     key_points: Vec<String>,
     raw_gemini_response: String,
+}
+
+#[derive(Deserialize)]
+struct ConceptEdgeRecord {
+    out: ConceptNode,
+    relevance_weight: f64,
+}
+
+#[derive(Deserialize)]
+struct ConceptNode {
+    id: Thing,
+    display_name: String,
+    description: String,
+    domain: String,
 }
 
 #[async_trait]
@@ -91,5 +106,68 @@ impl InsightRepo for SurrealInsightRepo {
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
         Ok(insight_id)
+    }
+
+    async fn get_for_work(&self, work_id: &str) -> Result<Option<InsightDetail>, RepoError> {
+        // Step 1: resolve the insight linked to this work via the interpreta edge
+        let mut edge_result = self
+            .db
+            .query("SELECT out FROM interpreta WHERE in = type::thing('work', $id) LIMIT 1")
+            .bind(("id", work_id.to_string()))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let edge_rows: Vec<OutRecord> = edge_result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let insight_thing = match edge_rows.into_iter().next() {
+            Some(r) => r.out,
+            None => return Ok(None),
+        };
+
+        let insight_id = thing_id_to_string(insight_thing.clone());
+
+        // Step 2: fetch the insight record itself
+        let insight_record: Option<InsightRecord> = self
+            .db
+            .select(("insight", insight_id.as_str()))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let insight = match insight_record {
+            Some(r) => r,
+            None => return Ok(None),
+        };
+
+        // Step 3: fetch concepts linked via menciona, including relevance_weight
+        let mut concept_result = self
+            .db
+            .query("SELECT out, relevance_weight FROM menciona WHERE in = $insight_id FETCH out")
+            .bind(("insight_id", insight_thing))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let concept_edges: Vec<ConceptEdgeRecord> = concept_result
+            .take(0)
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+
+        let concepts = concept_edges
+            .into_iter()
+            .map(|edge| ConceptWithWeight {
+                id: thing_id_to_string(edge.out.id),
+                display_name: edge.out.display_name,
+                description: edge.out.description,
+                domain: edge.out.domain,
+                relevance_weight: edge.relevance_weight,
+            })
+            .collect();
+
+        Ok(Some(InsightDetail {
+            id: insight_id,
+            summary: insight.summary,
+            key_points: insight.key_points,
+            concepts,
+        }))
     }
 }

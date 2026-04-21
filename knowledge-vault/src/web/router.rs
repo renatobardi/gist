@@ -11,6 +11,7 @@ use super::{
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
         websocket::ws_handler,
+        work_detail::{get_work_detail_page, get_work_insight},
         works::{get_work_by_id, get_works, post_works, post_works_retry},
     },
     middleware::security_headers::security_headers_layer,
@@ -29,6 +30,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/works", post(post_works).get(get_works))
         .route("/api/works/{id}", get(get_work_by_id))
         .route("/api/works/{id}/retry", post(post_works_retry))
+        .route("/api/works/{id}/insight", get(get_work_insight))
+        .route("/works/{id}", get(get_work_detail_page))
         .route("/ws", get(ws_handler))
         .route("/add", get(get_add_book))
         .route("/", get(root_redirect))
