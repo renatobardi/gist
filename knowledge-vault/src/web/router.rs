@@ -8,6 +8,7 @@ use super::{
     handlers::{
         add_book::get_add_book,
         auth::post_login,
+        library::get_library,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
         websocket::ws_handler,
@@ -31,7 +32,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/works/{id}/retry", post(post_works_retry))
         .route("/ws", get(ws_handler))
         .route("/add", get(get_add_book))
-        .route("/", get(root_redirect))
+        .route("/", get(get_library))
         .with_state(state)
         .layer(
             ServiceBuilder::new()
@@ -40,14 +41,4 @@ pub fn build_router(state: AppState) -> Router {
                 .layer(h3)
                 .layer(h4),
         )
-}
-
-async fn root_redirect(
-    axum::extract::State(state): axum::extract::State<AppState>,
-) -> axum::response::Response {
-    use axum::response::{IntoResponse, Redirect};
-    match state.user_repo.count().await {
-        Ok(0) => Redirect::to("/setup").into_response(),
-        _ => Redirect::to("/login").into_response(),
-    }
 }
