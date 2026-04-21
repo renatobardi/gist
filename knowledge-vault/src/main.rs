@@ -23,6 +23,8 @@ async fn main() -> anyhow::Result<()> {
         .json()
         .init();
 
+    info!("Starting knowledge-vault");
+
     let data_dir = std::env::var("KV_DATA_DIR").unwrap_or_else(|_| "data".to_string());
     let port = std::env::var("KV_PORT")
         .ok()
@@ -35,20 +37,32 @@ async fn main() -> anyhow::Result<()> {
         "dev-secret-change-in-production".to_string()
     });
 
+    info!(data_dir = %data_dir, "Opening database");
     let db = open_db(&data_dir).await?;
+    info!("Running schema migrations");
     run_migrations(&db).await?;
     info!("Database schema initialized");
 
     let nats_url =
         std::env::var("KV_NATS_URL").unwrap_or_else(|_| "nats://127.0.0.1:4222".to_string());
+    info!(nats_url = %nats_url, "Connecting to NATS");
     let message_publisher: Option<Arc<dyn knowledge_vault::ports::messaging::MessagePublisher>> =
-        match async_nats::connect(&nats_url).await {
-            Ok(client) => {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            async_nats::connect(&nats_url),
+        )
+        .await
+        {
+            Ok(Ok(client)) => {
                 info!("Connected to NATS at {nats_url}");
                 Some(Arc::new(NatsPublisher::new(client)))
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 tracing::warn!("NATS unavailable — POST /api/works will return 500: {e}");
+                None
+            }
+            Err(_) => {
+                tracing::warn!("NATS connect timed out after 5s — POST /api/works will return 500");
                 None
             }
         };
@@ -57,8 +71,22 @@ async fn main() -> anyhow::Result<()> {
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db));
+
+    info!("Building HTTP client for Open Library");
     let open_library_client: Option<Arc<dyn knowledge_vault::ports::external::OpenLibraryPort>> =
-        Some(Arc::new(OpenLibraryClient::new()));
+        match OpenLibraryClient::build() {
+            Ok(client) => {
+                info!("Open Library HTTP client ready");
+                Some(Arc::new(client))
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to build Open Library client — title submissions will return 500: {e}"
+                );
+                None
+            }
+        };
+
     let state = AppState {
         user_repo,
         login_attempt_repo,
