@@ -21,26 +21,20 @@ pub struct OpenLibraryClient {
 }
 
 impl OpenLibraryClient {
-    pub fn new() -> Self {
+    pub fn build() -> Result<Self, reqwest::Error> {
         let client = reqwest::Client::builder()
             .user_agent("knowledge-vault/0.1 (renato.bardi@outlook.com)")
-            .build()
-            .expect("failed to build HTTP client");
-        Self { client }
-    }
-}
-
-impl Default for OpenLibraryClient {
-    fn default() -> Self {
-        Self::new()
+            .build()?;
+        Ok(Self { client })
     }
 }
 
 #[async_trait]
 impl OpenLibraryPort for OpenLibraryClient {
     async fn search_by_title(&self, title: &str) -> Result<Option<OpenLibraryBook>, String> {
+        // Architecture specifies plain HTTP for the Open Library API (no API key required).
         let url = reqwest::Url::parse_with_params(
-            "https://openlibrary.org/search.json",
+            "http://openlibrary.org/search.json",
             &[
                 ("title", title),
                 ("limit", "1"),
