@@ -42,6 +42,21 @@ pub trait TokenRepo: Send + Sync {
 pub trait WorkRepo: Send + Sync {
     async fn find_by_isbn(&self, isbn: &str) -> Result<Option<Work>, RepoError>;
     async fn create_work(&self, isbn: &str) -> Result<Work, RepoError>;
+    async fn find_by_open_library_id(&self, ol_id: &str) -> Result<Option<Work>, RepoError>;
+    async fn create_work_by_title(
+        &self,
+        title: &str,
+        author: &str,
+        open_library_id: &str,
+    ) -> Result<Work, RepoError>;
+    async fn list_works(&self, limit: u32, offset: u32) -> Result<Vec<Work>, RepoError>;
+    async fn get_work_by_id(&self, id: &str) -> Result<Option<Work>, RepoError>;
+    async fn update_work_status(
+        &self,
+        id: &str,
+        status: &str,
+        error_msg: Option<&str>,
+    ) -> Result<(), RepoError>;
 }
 
 #[async_trait::async_trait]

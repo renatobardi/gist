@@ -1,2 +1,8 @@
 # Gitleaks ignore file for false positives
 # Add specific commit SHAs or paths that should be ignored by gitleaks
+
+# Initial docs commit — example token values in documentation (not real secrets)
+# Fixed in subsequent commit; originals suppressed here to avoid blocking the PR
+0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/api-pat.md:curl-auth-header:162
+0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:36
+0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:192

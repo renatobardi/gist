@@ -1,16 +1,15 @@
 [advisories]
 # Transitive dependencies that cannot be updated directly.
-# These are acknowledged risks; revisit when the upstream crates release fixes.
+# Revisit when the pulling crate releases a version that drops or updates these.
 ignore = [
-    # via heapless -> surrealdb
-    "RUSTSEC-2023-0089",  # atomic-polyfill unmaintained
-    # via surrealdb
-    "RUSTSEC-2025-0141",  # bincode unmaintained
-    "RUSTSEC-2026-0002",  # lru IterMut unsound
-    # via async-nats v0.37.0 (rustls-webpki 0.102.8) — fix requires upgrading async-nats
-    "RUSTSEC-2026-0049",  # CRLs not considered authoritative by Distribution Point
-    "RUSTSEC-2026-0098",  # URI name constraints incorrectly accepted
-    "RUSTSEC-2026-0099",  # wildcard name constraints incorrectly accepted
-    # via async-nats v0.37.0 (rustls-pemfile 2.2.0) — unmaintained, no alternative in this dep tree
-    "RUSTSEC-2025-0134",  # rustls-pemfile unmaintained
+    "RUSTSEC-2023-0089",  # atomic-polyfill unmaintained (via heapless -> surrealdb)
+    "RUSTSEC-2025-0141",  # bincode unmaintained (via surrealdb)
+    "RUSTSEC-2026-0002",  # lru IterMut unsound (via surrealkv -> surrealdb)
+
+    # async-nats v0.37.0 pins rustls-webpki v0.102.x and rustls-pemfile v2.x;
+    # these advisories will clear when async-nats ships a release that updates rustls.
+    "RUSTSEC-2026-0049",  # rustls-webpki: CRLs not authoritative due to faulty matching (via async-nats)
+    "RUSTSEC-2026-0098",  # rustls-webpki: URI name constraints incorrectly accepted (via async-nats)
+    "RUSTSEC-2026-0099",  # rustls-webpki: wildcard name constraints accepted (via async-nats)
+    "RUSTSEC-2025-0134",  # rustls-pemfile unmaintained (via async-nats)
 ]

@@ -73,22 +73,27 @@ jobs:
           REMOTE_HOST="${DEPLOY_USER}@${DEPLOY_HOST}"
           BINARY_PATH="knowledge-vault/target/aarch64-unknown-linux-musl/release/knowledge-vault"
 
-          # Backup current binary for rollback
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" \
-            "[ -f ${DEPLOY_PATH}/knowledge-vault ] && sudo cp ${DEPLOY_PATH}/knowledge-vault ${DEPLOY_PATH}/knowledge-vault.backup || true"
+          # Upload to a temp path the deploy user can write to; avoids
+          # "Permission denied" when the existing binary is root-owned.
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$BINARY_PATH" "${REMOTE_HOST}:/tmp/knowledge-vault-new"
 
-          # Deploy new binary
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$BINARY_PATH" "${REMOTE_HOST}:${DEPLOY_PATH}/knowledge-vault"
-
-          # Make executable and restart service
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" \
-            "sudo chmod +x ${DEPLOY_PATH}/knowledge-vault && sudo systemctl restart knowledge-vault"
+          # Backup, install, and restart — all via sudo in one SSH call.
+          # Use 'sudo install' instead of 'sudo mv' so the file is created
+          # at the destination (inheriting the correct SELinux context for
+          # that directory). 'mv' from /tmp keeps the tmp_t context which
+          # systemd cannot exec under ProtectSystem=strict + SELinux.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" "
+            [ -f ${DEPLOY_PATH}/knowledge-vault ] && sudo cp ${DEPLOY_PATH}/knowledge-vault ${DEPLOY_PATH}/knowledge-vault.backup || true
+            sudo install -m 755 /tmp/knowledge-vault-new ${DEPLOY_PATH}/knowledge-vault
+            sudo rm -f /tmp/knowledge-vault-new
+            sudo systemctl restart knowledge-vault
+          "
 
       - name: Health check
         run: |
+          REMOTE_SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes ${DEPLOY_USER}@${DEPLOY_HOST}"
           for i in {1..30}; do
-            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
-              "systemctl is-active knowledge-vault" > /dev/null 2>&1; then
+            if $REMOTE_SSH "systemctl is-active knowledge-vault" > /dev/null 2>&1; then
               echo "Service is active"
               exit 0
             fi
@@ -96,7 +101,10 @@ jobs:
             sleep 2
           done
 
-          echo "Health check failed: service did not become active"
+          echo "Health check failed — dumping journal for diagnosis:"
+          $REMOTE_SSH "sudo journalctl -u knowledge-vault -n 100 --no-pager" || true
+          echo "---"
+          $REMOTE_SSH "systemctl status knowledge-vault --no-pager" || true
           exit 1
 
       - name: Cleanup SSH key
