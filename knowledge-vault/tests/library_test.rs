@@ -32,6 +32,7 @@ async fn make_test_server() -> TestServer {
     run_migrations(&db).await.unwrap();
 
     let state = AppState {
+        db: Arc::new(db.clone()),
         user_repo: Arc::new(SurrealUserRepo::new(db.clone())),
         login_attempt_repo: Arc::new(SurrealLoginAttemptRepo::new(db.clone())),
         token_repo: Arc::new(SurrealTokenRepo::new(db.clone())),

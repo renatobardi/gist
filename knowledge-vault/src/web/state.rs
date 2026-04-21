@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use surrealdb::{engine::local::Db, Surreal};
+
 use crate::ports::external::OpenLibraryPort;
 use crate::ports::messaging::MessagePublisher;
 use crate::ports::repository::{
@@ -9,6 +11,7 @@ use crate::web::ws_broadcaster::WsBroadcaster;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub db: Arc<Surreal<Db>>,
     pub user_repo: Arc<dyn UserRepo>,
     pub login_attempt_repo: Arc<dyn LoginAttemptRepo>,
     pub token_repo: Arc<dyn TokenRepo>,
