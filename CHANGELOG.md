@@ -16,9 +16,6 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Database connectivity verified with non-blocking `RETURN 1` query
 - PR: [https://github.com/renatobardi/gist/pull/35](https://github.com/renatobardi/gist/pull/35)
 
-### Documentation
-- Added Health Check Endpoint section to README API Reference
-
 #### Transactional Graph Write Persistence (2026-04-21)
 - New `GraphWriteRepo` port trait for atomic graph write transactions.
 - Implementation using SurrealDB's `BEGIN TRANSACTION` / `COMMIT` to ensure all-or-nothing semantics for graph population (concept upserts, edge creations, insight persistence, and work status updates).
@@ -33,6 +30,7 @@ All notable changes to Knowledge Vault will be documented in this file.
 - NATS `discovery.requested` event published upon successful ingestion
 
 ### Documentation
+- Added Health Check Endpoint section to README API Reference
 - Added `api-works.md` for `POST /api/works` endpoint with request/response details
 - Updated `architecture.md` API Design section to include `works` endpoints
 - Updated `README.md` with link to Works API documentation

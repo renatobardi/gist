@@ -370,7 +370,7 @@ GET /health
 Response: 200 OK
 {
   "status": "ok",
-  "version": "0.1.0",
+  "version": "<x.y.z>",
   "db": "connected"
 }
 ```
@@ -381,7 +381,7 @@ GET /health
 Response: 503 Service Unavailable
 {
   "status": "degraded",
-  "version": "0.1.0",
+  "version": "<x.y.z>",
   "db": "disconnected"
 }
 ```
