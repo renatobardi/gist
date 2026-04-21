@@ -1,6 +1,23 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptWithWeight {
+    pub id: String,
+    pub display_name: String,
+    pub description: String,
+    pub domain: String,
+    pub relevance_weight: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsightDetail {
+    pub id: String,
+    pub summary: String,
+    pub key_points: Vec<String>,
+    pub concepts: Vec<ConceptWithWeight>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Insight {
     pub id: String,
     pub summary: String,

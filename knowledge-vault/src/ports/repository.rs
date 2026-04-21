@@ -1,4 +1,4 @@
-use crate::domain::insight::{ExtractedConcept, GeminiResponse};
+use crate::domain::insight::{ExtractedConcept, GeminiResponse, InsightDetail};
 use crate::domain::user::{PersonalAccessToken, User};
 use crate::domain::work::Work;
 
@@ -77,6 +77,8 @@ pub trait InsightRepo: Send + Sync {
         key_points: Vec<String>,
         raw_json: &str,
     ) -> Result<String, RepoError>;
+
+    async fn get_for_work(&self, work_id: &str) -> Result<Option<InsightDetail>, RepoError>;
 }
 
 #[async_trait::async_trait]
