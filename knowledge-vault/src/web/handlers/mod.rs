@@ -1,5 +1,6 @@
 pub mod add_book;
 pub mod auth;
+pub mod library;
 pub mod setup;
 pub mod tokens;
 pub mod websocket;

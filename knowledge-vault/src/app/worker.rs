@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::ports::{
     external::{ExternalError, GeminiPort, OpenLibraryPort},
     messaging::{MessageHandler, WorkerError},
-    repository::{ConceptRepo, InsightRepo, RepoError, WorkRepo},
+    repository::{GraphWriteRepo, RepoError, WorkRepo},
 };
 
 impl From<RepoError> for WorkerError {
@@ -53,8 +53,7 @@ struct DiscoveryMessage {
 
 pub struct WorkerService {
     work_repo: Arc<dyn WorkRepo>,
-    insight_repo: Arc<dyn InsightRepo>,
-    concept_repo: Arc<dyn ConceptRepo>,
+    graph_write_repo: Arc<dyn GraphWriteRepo>,
     openlib: Arc<dyn OpenLibraryPort>,
     gemini: Arc<dyn GeminiPort>,
 }
@@ -62,15 +61,13 @@ pub struct WorkerService {
 impl WorkerService {
     pub fn new(
         work_repo: Arc<dyn WorkRepo>,
-        insight_repo: Arc<dyn InsightRepo>,
-        concept_repo: Arc<dyn ConceptRepo>,
+        graph_write_repo: Arc<dyn GraphWriteRepo>,
         openlib: Arc<dyn OpenLibraryPort>,
         gemini: Arc<dyn GeminiPort>,
     ) -> Self {
         Self {
             work_repo,
-            insight_repo,
-            concept_repo,
+            graph_write_repo,
             openlib,
             gemini,
         }
@@ -101,26 +98,9 @@ impl WorkerService {
 
         let gemini_resp = self.gemini.extract_concepts(&metadata).await?;
 
-        let raw_json = serde_json::to_string(&gemini_resp).map_err(|e| {
-            WorkerError::Permanent(format!("failed to serialize gemini response: {e}"))
-        })?;
-
-        let insight_id = self
-            .insight_repo
-            .create_insight(
-                &dm.work_id,
-                &gemini_resp.summary,
-                gemini_resp.key_points.clone(),
-                &raw_json,
-            )
-            .await?;
-
-        self.concept_repo
-            .upsert_and_link(&dm.work_id, &insight_id, gemini_resp.concepts)
-            .await?;
-
-        self.work_repo
-            .update_status(&dm.work_id, "done", None)
+        // Atomic graph write: insight + edges + concepts + work status = "done" in one transaction.
+        self.graph_write_repo
+            .write_graph_transaction(&dm.work_id, &gemini_resp)
             .await?;
 
         tracing::info!(work_id = %dm.work_id, "work processing complete");
@@ -184,7 +164,6 @@ mod tests {
 
     #[test]
     fn full_retry_sequence_exhausts_at_five_attempts() {
-        // Simulate the retry state machine over 5 deliveries.
         let err = WorkerError::Transient("timeout".into());
         let mut retry_count = 0u32;
         let mut terminate_at = 0u32;

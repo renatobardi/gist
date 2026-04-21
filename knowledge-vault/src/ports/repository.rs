@@ -1,4 +1,4 @@
-use crate::domain::insight::{ExtractedConcept, InsightDetail};
+use crate::domain::insight::{ExtractedConcept, GeminiResponse, InsightDetail};
 use crate::domain::user::{PersonalAccessToken, User};
 use crate::domain::work::Work;
 
@@ -88,6 +88,18 @@ pub trait ConceptRepo: Send + Sync {
         work_id: &str,
         insight_id: &str,
         concepts: Vec<ExtractedConcept>,
+    ) -> Result<(), RepoError>;
+}
+
+/// Atomically writes the full graph result for one work: insight node, interpreta edge,
+/// concept upserts, menciona edges, relacionado_a edges, and work status → "done".
+/// Uses SurrealDB BEGIN TRANSACTION / COMMIT to guarantee all-or-nothing semantics.
+#[async_trait::async_trait]
+pub trait GraphWriteRepo: Send + Sync {
+    async fn write_graph_transaction(
+        &self,
+        work_id: &str,
+        gemini_response: &GeminiResponse,
     ) -> Result<(), RepoError>;
 }
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::http::StatusCode;
 use axum_test::TestServer;
-use serde_json::{json, Value};
+use serde_json::json;
 use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
@@ -60,26 +60,29 @@ async fn setup_and_login(server: &TestServer) -> String {
         .json(&json!({"email": "admin@example.com", "password": "validpassword1"}))
         .await;
     resp.assert_status(StatusCode::OK);
-    resp.json::<Value>()["token"].as_str().unwrap().to_string()
+    resp.json::<serde_json::Value>()["token"]
+        .as_str()
+        .unwrap()
+        .to_string()
 }
 
 #[tokio::test]
-async fn get_add_book_returns_200() {
+async fn get_library_authenticated_returns_200() {
     let server = make_test_server().await;
     let jwt = setup_and_login(&server).await;
     let res = server
-        .get("/add")
+        .get("/")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     assert_eq!(res.status_code(), StatusCode::OK);
 }
 
 #[tokio::test]
-async fn get_add_book_returns_html() {
+async fn get_library_returns_html_content_type() {
     let server = make_test_server().await;
     let jwt = setup_and_login(&server).await;
     let res = server
-        .get("/add")
+        .get("/")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let ct = res
@@ -91,52 +94,87 @@ async fn get_add_book_returns_html() {
 }
 
 #[tokio::test]
-async fn get_add_book_contains_form_elements() {
+async fn get_library_contains_key_elements() {
     let server = make_test_server().await;
     let jwt = setup_and_login(&server).await;
     let res = server
-        .get("/add")
+        .get("/")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains(r#"id="identifier""#));
-    assert!(body.contains(r#"id="add-form""#));
-    assert!(body.contains("ISBN or Title"));
-    assert!(body.contains("/api/works"));
+    assert!(body.contains("Library"), "missing Library heading");
+    assert!(body.contains("Add Book"), "missing Add Book button");
+    assert!(body.contains("/add"), "missing link to /add");
+    assert!(
+        body.contains("/api/works"),
+        "missing API works endpoint reference"
+    );
 }
 
 #[tokio::test]
-async fn get_add_book_contains_isbn_validation_logic() {
+async fn get_library_has_status_badge_styles() {
     let server = make_test_server().await;
     let jwt = setup_and_login(&server).await;
     let res = server
-        .get("/add")
+        .get("/")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains("validateIsbn13"));
-    assert!(body.contains("validateIsbn10"));
-    assert!(body.contains("check digit mismatch"));
-    assert!(body.contains("Invalid ISBN-13"));
+    assert!(
+        body.contains("badge-pending"),
+        "missing pending badge style"
+    );
+    assert!(
+        body.contains("badge-processing"),
+        "missing processing badge style"
+    );
+    assert!(body.contains("badge-done"), "missing done badge style");
+    assert!(body.contains("badge-failed"), "missing failed badge style");
 }
 
 #[tokio::test]
-async fn get_add_book_contains_accessibility_attributes() {
+async fn get_library_has_accessibility_attributes() {
     let server = make_test_server().await;
     let jwt = setup_and_login(&server).await;
     let res = server
-        .get("/add")
+        .get("/")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains(r#"aria-required="true""#));
-    assert!(body.contains("aria-describedby"));
-    assert!(body.contains(r#"role="alert""#));
+    assert!(body.contains("aria-label"), "missing aria-label");
+    assert!(body.contains("aria-live"), "missing aria-live");
 }
 
 #[tokio::test]
-async fn get_add_book_without_auth_returns_401() {
+async fn get_library_unauthenticated_redirects_to_login() {
     let server = make_test_server().await;
-    let res = server.get("/add").await;
-    assert_eq!(res.status_code(), StatusCode::UNAUTHORIZED);
+    // Set up a user so it's not a first-run scenario
+    server
+        .post("/api/setup")
+        .json(&json!({"email": "admin@example.com", "password": "validpassword1"}))
+        .await
+        .assert_status(StatusCode::CREATED);
+
+    let res = server.get("/").await;
+    assert_eq!(res.status_code(), StatusCode::SEE_OTHER);
+    let location = res
+        .headers()
+        .get("location")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(location, "/login", "expected redirect to /login");
+}
+
+#[tokio::test]
+async fn get_library_no_users_redirects_to_setup() {
+    let server = make_test_server().await;
+    // No setup — no users in the database
+    let res = server.get("/").await;
+    assert_eq!(res.status_code(), StatusCode::SEE_OTHER);
+    let location = res
+        .headers()
+        .get("location")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(location, "/setup", "expected redirect to /setup");
 }

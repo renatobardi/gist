@@ -13,9 +13,10 @@ use adapters::{
     nats::{consumer::NatsConsumer, publisher::NatsPublisher},
     openlib::OpenLibraryClient,
     surreal::{
-        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
-        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
-        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
+        concept_repo::SurrealConceptRepo, graph_write_repo::SurrealGraphWriteRepo,
+        insight_repo::SurrealInsightRepo, login_attempt_repo::SurrealLoginAttemptRepo,
+        schema::run_migrations, token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
+        work_repo::SurrealWorkRepo,
     },
 };
 use app::worker::WorkerService;
@@ -81,6 +82,8 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo: Arc<dyn knowledge_vault::ports::repository::ConceptRepo> =
         Arc::new(SurrealConceptRepo::new(db.clone()));
+    let graph_write_repo: Arc<dyn knowledge_vault::ports::repository::GraphWriteRepo> =
+        Arc::new(SurrealGraphWriteRepo::new(db.clone()));
 
     info!("Building HTTP client for Open Library");
     let open_library_client: Option<Arc<dyn knowledge_vault::ports::external::OpenLibraryPort>> =
@@ -150,8 +153,7 @@ async fn main() -> anyhow::Result<()> {
 
                         let worker = Arc::new(WorkerService::new(
                             work_repo.clone(),
-                            insight_repo.clone(),
-                            concept_repo.clone(),
+                            graph_write_repo.clone(),
                             openlib,
                             gemini,
                         ));
@@ -172,6 +174,7 @@ async fn main() -> anyhow::Result<()> {
         work_repo,
         insight_repo,
         concept_repo,
+        graph_write_repo,
         message_publisher,
         open_library_client,
         ws_broadcaster,

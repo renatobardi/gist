@@ -418,8 +418,8 @@ POST /auth/login           → 200 {token} + Set-Cookie: session=...; HttpOnly; 
 
 **Works**
 ```
-POST /api/works            → 202 {work_id, status: "pending"}  |  409 {work_id, error: "duplicate"}
-     body: {identifier: "<isbn or title>", identifier_type: "isbn"|"title"}
+POST /api/works            → 202 {work_id, status: "pending"}  |  409 {work_id, error: "duplicate"} | 422 {error: "invalid_isbn"}
+     body: {identifier: "<isbn>", identifier_type: "isbn"}
 
 GET  /api/works            → 200 [{work_id, title, author, status, error_msg, created_at}]
 
