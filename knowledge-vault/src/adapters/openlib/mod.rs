@@ -40,7 +40,7 @@ impl Default for OpenLibraryClient {
 impl OpenLibraryPort for OpenLibraryClient {
     async fn search_by_title(&self, title: &str) -> Result<Option<OpenLibraryBook>, String> {
         let url = reqwest::Url::parse_with_params(
-            "https://openlibrary.org/search.json",
+            "http://openlibrary.org/search.json",
             &[
                 ("title", title),
                 ("limit", "1"),
