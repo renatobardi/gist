@@ -168,6 +168,7 @@ async fn main() -> anyhow::Result<()> {
 
     let ws_broadcaster = WsBroadcaster::new();
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,

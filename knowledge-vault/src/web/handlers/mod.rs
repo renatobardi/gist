@@ -1,5 +1,6 @@
 pub mod add_book;
 pub mod auth;
+pub mod health;
 pub mod library;
 pub mod setup;
 pub mod tokens;

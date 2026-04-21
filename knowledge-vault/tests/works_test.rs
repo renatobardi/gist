@@ -77,8 +77,9 @@ async fn make_test_server_with_nats() -> TestServer {
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,
@@ -104,8 +105,9 @@ async fn make_test_server_no_nats() -> TestServer {
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,
@@ -131,8 +133,9 @@ async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> Te
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,
@@ -397,8 +400,9 @@ async fn post_works_open_library_error_returns_500() {
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,

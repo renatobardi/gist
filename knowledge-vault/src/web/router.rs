@@ -8,6 +8,7 @@ use super::{
     handlers::{
         add_book::get_add_book,
         auth::post_login,
+        health::get_health,
         library::get_library,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
         tokens::{delete_token, get_tokens, post_token},
@@ -23,6 +24,7 @@ pub fn build_router(state: AppState) -> Router {
     let [h1, h2, h3, h4] = security_headers_layer();
 
     Router::new()
+        .route("/health", get(get_health))
         .route("/setup", get(get_setup).post(post_setup_form))
         .route("/api/setup", get(get_setup_json).post(post_setup_json))
         .route("/auth/login", post(post_login))

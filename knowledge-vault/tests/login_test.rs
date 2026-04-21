@@ -26,8 +26,9 @@ async fn make_test_server() -> TestServer {
     let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
-    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db));
+    let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
     let state = AppState {
+        db: Arc::new(db),
         user_repo,
         login_attempt_repo,
         token_repo,
