@@ -1,4 +1,4 @@
-use knowledge_vault::{adapters, web};
+use knowledge_vault::{adapters, app, web};
 
 use std::sync::Arc;
 
@@ -6,14 +6,19 @@ use surrealdb::{engine::local::Db, Surreal};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
+use async_nats::jetstream::{self, consumer::pull, stream};
+
 use adapters::{
-    nats::publisher::NatsPublisher,
+    gemini::GeminiClient,
+    nats::{consumer::NatsConsumer, publisher::NatsPublisher},
     openlib::OpenLibraryClient,
     surreal::{
+        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
 };
+use app::worker::WorkerService;
 use web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster};
 
 #[tokio::main]
@@ -70,7 +75,12 @@ async fn main() -> anyhow::Result<()> {
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
-    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let work_repo: Arc<dyn knowledge_vault::ports::repository::WorkRepo> =
+        Arc::new(SurrealWorkRepo::new(db.clone()));
+    let insight_repo: Arc<dyn knowledge_vault::ports::repository::InsightRepo> =
+        Arc::new(SurrealInsightRepo::new(db.clone()));
+    let concept_repo: Arc<dyn knowledge_vault::ports::repository::ConceptRepo> =
+        Arc::new(SurrealConceptRepo::new(db.clone()));
 
     info!("Building HTTP client for Open Library");
     let open_library_client: Option<Arc<dyn knowledge_vault::ports::external::OpenLibraryPort>> =
@@ -87,12 +97,81 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
+    // Start NATS worker if Gemini API key is set
+    let gemini_api_key = std::env::var("KV_GEMINI_API_KEY").ok();
+    match gemini_api_key {
+        None => {
+            tracing::warn!("KV_GEMINI_API_KEY not set — NATS worker will not start");
+        }
+        Some(api_key) => match async_nats::connect(&nats_url).await {
+            Err(e) => {
+                tracing::warn!("NATS unavailable for worker — worker will not start: {e}");
+            }
+            Ok(nats_client) => {
+                let js = jetstream::new(nats_client);
+                let consumer_result: anyhow::Result<_> = async {
+                    let nats_stream = js
+                        .get_or_create_stream(stream::Config {
+                            name: "DISCOVERY".to_string(),
+                            subjects: vec!["discovery.requested".to_string()],
+                            ..Default::default()
+                        })
+                        .await
+                        .map_err(anyhow::Error::from)?;
+                    nats_stream
+                        .get_or_create_consumer(
+                            "worker",
+                            pull::Config {
+                                durable_name: Some("worker".to_string()),
+                                ..Default::default()
+                            },
+                        )
+                        .await
+                        .map_err(anyhow::Error::from)
+                }
+                .await;
+                match consumer_result {
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to create NATS consumer — worker will not start: {e}"
+                        );
+                    }
+                    Ok(js_consumer) => {
+                        let consumer = NatsConsumer::new(js_consumer);
+                        let model = std::env::var("KV_GEMINI_MODEL")
+                            .unwrap_or_else(|_| "gemini-2.0-flash".to_string());
+                        let openlib = Arc::new(
+                            OpenLibraryClient::build()
+                                .expect("failed to build OpenLibraryClient for worker"),
+                        )
+                            as Arc<dyn knowledge_vault::ports::external::OpenLibraryPort>;
+                        let gemini = Arc::new(GeminiClient::new(api_key, model))
+                            as Arc<dyn knowledge_vault::ports::external::GeminiPort>;
+
+                        let worker = Arc::new(WorkerService::new(
+                            work_repo.clone(),
+                            insight_repo.clone(),
+                            concept_repo.clone(),
+                            openlib,
+                            gemini,
+                        ));
+
+                        info!("Starting NATS worker");
+                        worker.spawn(consumer);
+                    }
+                }
+            }
+        },
+    }
+
     let ws_broadcaster = WsBroadcaster::new();
     let state = AppState {
         user_repo,
         login_attempt_repo,
         token_repo,
         work_repo,
+        insight_repo,
+        concept_repo,
         message_publisher,
         open_library_client,
         ws_broadcaster,

@@ -1,4 +1,28 @@
-use crate::ports::messaging::WorkerError;
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use serde::Deserialize;
+
+use crate::ports::{
+    external::{ExternalError, GeminiPort, OpenLibraryPort},
+    messaging::{MessageHandler, WorkerError},
+    repository::{ConceptRepo, InsightRepo, RepoError, WorkRepo},
+};
+
+impl From<RepoError> for WorkerError {
+    fn from(e: RepoError) -> Self {
+        WorkerError::Transient(e.to_string())
+    }
+}
+
+impl From<ExternalError> for WorkerError {
+    fn from(e: ExternalError) -> Self {
+        match e {
+            ExternalError::Transient(msg) => WorkerError::Transient(msg),
+            ExternalError::Permanent(msg) => WorkerError::Permanent(msg),
+        }
+    }
+}
 
 /// Classifies a raw error string into a worker error kind.
 ///
@@ -16,6 +40,99 @@ pub fn classify_error(msg: &str) -> WorkerError {
         WorkerError::Transient(msg.to_string())
     } else {
         WorkerError::Permanent(msg.to_string())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct DiscoveryMessage {
+    work_id: String,
+    identifier: String,
+    #[allow(dead_code)]
+    identifier_type: String,
+}
+
+pub struct WorkerService {
+    work_repo: Arc<dyn WorkRepo>,
+    insight_repo: Arc<dyn InsightRepo>,
+    concept_repo: Arc<dyn ConceptRepo>,
+    openlib: Arc<dyn OpenLibraryPort>,
+    gemini: Arc<dyn GeminiPort>,
+}
+
+impl WorkerService {
+    pub fn new(
+        work_repo: Arc<dyn WorkRepo>,
+        insight_repo: Arc<dyn InsightRepo>,
+        concept_repo: Arc<dyn ConceptRepo>,
+        openlib: Arc<dyn OpenLibraryPort>,
+        gemini: Arc<dyn GeminiPort>,
+    ) -> Self {
+        Self {
+            work_repo,
+            insight_repo,
+            concept_repo,
+            openlib,
+            gemini,
+        }
+    }
+
+    pub fn spawn(self: Arc<Self>, consumer: crate::adapters::nats::consumer::NatsConsumer) {
+        tokio::spawn(async move {
+            if let Err(e) = consumer.run(self.as_ref()).await {
+                tracing::error!("worker loop exited with error: {e}");
+            }
+        });
+    }
+
+    async fn process(&self, payload: &[u8]) -> Result<(), WorkerError> {
+        let text = std::str::from_utf8(payload)
+            .map_err(|e| WorkerError::Permanent(format!("invalid UTF-8 in message: {e}")))?;
+
+        let dm: DiscoveryMessage = serde_json::from_str(text)
+            .map_err(|e| WorkerError::Permanent(format!("invalid message JSON: {e}")))?;
+
+        tracing::info!(work_id = %dm.work_id, isbn = %dm.identifier, "processing discovery message");
+
+        self.work_repo
+            .update_status(&dm.work_id, "processing", None)
+            .await?;
+
+        let metadata = self.openlib.fetch_by_isbn(&dm.identifier).await?;
+
+        let gemini_resp = self.gemini.extract_concepts(&metadata).await?;
+
+        let raw_json = serde_json::to_string(&gemini_resp).map_err(|e| {
+            WorkerError::Permanent(format!("failed to serialize gemini response: {e}"))
+        })?;
+
+        let insight_id = self
+            .insight_repo
+            .create_insight(
+                &dm.work_id,
+                &gemini_resp.summary,
+                gemini_resp.key_points.clone(),
+                &raw_json,
+            )
+            .await?;
+
+        self.concept_repo
+            .upsert_and_link(&dm.work_id, &insight_id, gemini_resp.concepts)
+            .await?;
+
+        self.work_repo
+            .update_status(&dm.work_id, "done", None)
+            .await?;
+
+        tracing::info!(work_id = %dm.work_id, "work processing complete");
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl MessageHandler for WorkerService {
+    async fn handle(&self, _subject: &str, payload: &[u8]) -> Result<(), WorkerError> {
+        self.process(payload).await
     }
 }
 
