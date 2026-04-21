@@ -5,7 +5,8 @@ use surrealdb::{engine::local::Db, Surreal};
 use crate::ports::external::OpenLibraryPort;
 use crate::ports::messaging::MessagePublisher;
 use crate::ports::repository::{
-    ConceptRepo, GraphWriteRepo, InsightRepo, LoginAttemptRepo, TokenRepo, UserRepo, WorkRepo,
+    ConceptRepo, GraphReadRepo, GraphWriteRepo, InsightRepo, LoginAttemptRepo, TokenRepo, UserRepo,
+    WorkRepo,
 };
 use crate::web::ws_broadcaster::WsBroadcaster;
 
@@ -19,6 +20,7 @@ pub struct AppState {
     pub insight_repo: Arc<dyn InsightRepo>,
     pub concept_repo: Arc<dyn ConceptRepo>,
     pub graph_write_repo: Arc<dyn GraphWriteRepo>,
+    pub graph_read_repo: Arc<dyn GraphReadRepo>,
     pub message_publisher: Option<Arc<dyn MessagePublisher>>,
     pub open_library_client: Option<Arc<dyn OpenLibraryPort>>,
     pub ws_broadcaster: Arc<WsBroadcaster>,

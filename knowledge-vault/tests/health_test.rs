@@ -7,10 +7,10 @@ use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
-        concept_repo::SurrealConceptRepo, graph_write_repo::SurrealGraphWriteRepo,
-        insight_repo::SurrealInsightRepo, login_attempt_repo::SurrealLoginAttemptRepo,
-        schema::run_migrations, token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo,
-        work_repo::SurrealWorkRepo,
+        concept_repo::SurrealConceptRepo, graph_read_repo::SurrealGraphReadRepo,
+        graph_write_repo::SurrealGraphWriteRepo, insight_repo::SurrealInsightRepo,
+        login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
+        token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
     web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
 };
@@ -27,6 +27,7 @@ async fn make_test_server() -> TestServer {
     let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
     let concept_repo = Arc::new(SurrealConceptRepo::new(db.clone()));
     let graph_write_repo = Arc::new(SurrealGraphWriteRepo::new(db.clone()));
+    let graph_read_repo = Arc::new(SurrealGraphReadRepo::new(db.clone()));
     let state = AppState {
         db: Arc::new(db),
         user_repo,
@@ -36,6 +37,7 @@ async fn make_test_server() -> TestServer {
         insight_repo,
         concept_repo,
         graph_write_repo,
+        graph_read_repo,
         message_publisher: None,
         open_library_client: None,
         ws_broadcaster: WsBroadcaster::new(),
