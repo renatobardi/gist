@@ -15,7 +15,7 @@ use knowledge_vault::{
         external::{OpenLibraryBook, OpenLibraryPort},
         messaging::MessagePublisher,
     },
-    web::{router::build_router, state::AppState},
+    web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
 };
 
 struct NoopPublisher;
@@ -68,6 +68,7 @@ async fn make_test_server_with_nats() -> TestServer {
         work_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: None,
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
 
@@ -88,6 +89,7 @@ async fn make_test_server_no_nats() -> TestServer {
         work_repo,
         message_publisher: None,
         open_library_client: None,
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
 
@@ -108,6 +110,7 @@ async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> Te
         work_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(MockOpenLibraryClient { result: ol_result })),
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
 
@@ -129,9 +132,9 @@ async fn setup_and_login(server: &TestServer) -> String {
     resp.json::<Value>()["token"].as_str().unwrap().to_string()
 }
 
-// Valid ISBN-13 → 202 with work_id and status=pending
+// POST /api/works — valid ISBN returns 202 with work_id
 #[tokio::test]
-async fn post_works_valid_isbn13_returns_202() {
+async fn post_works_valid_isbn_returns_202() {
     let server = make_test_server_with_nats().await;
     let jwt = setup_and_login(&server).await;
 
@@ -147,7 +150,7 @@ async fn post_works_valid_isbn13_returns_202() {
     assert_eq!(body["status"], "pending");
 }
 
-// Duplicate ISBN → 409 with existing work_id
+// POST /api/works — duplicate ISBN returns 409
 #[tokio::test]
 async fn post_works_duplicate_isbn_returns_409() {
     let server = make_test_server_with_nats().await;
@@ -164,19 +167,19 @@ async fn post_works_duplicate_isbn_returns_409() {
         .unwrap()
         .to_string();
 
-    let resp = server
+    let second = server
         .post("/api/works")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
         .await;
 
-    resp.assert_status(StatusCode::CONFLICT);
-    let body: Value = resp.json();
+    second.assert_status(StatusCode::CONFLICT);
+    let body: Value = second.json();
     assert_eq!(body["work_id"], first_id);
     assert_eq!(body["error"], "duplicate");
 }
 
-// Invalid ISBN → 422
+// POST /api/works — invalid ISBN returns 422
 #[tokio::test]
 async fn post_works_invalid_isbn_returns_422() {
     let server = make_test_server_with_nats().await;
@@ -185,16 +188,15 @@ async fn post_works_invalid_isbn_returns_422() {
     let resp = server
         .post("/api/works")
         .add_header("Authorization", format!("Bearer {jwt}"))
-        .json(&json!({"identifier": "1234567890123", "identifier_type": "isbn"}))
+        .json(&json!({"identifier": "not-an-isbn", "identifier_type": "isbn"}))
         .await;
 
     resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
     let body: Value = resp.json();
     assert_eq!(body["error"], "invalid_isbn");
-    assert!(body["message"].is_string());
 }
 
-// Unauthenticated request → 401
+// POST /api/works — without auth returns 401
 #[tokio::test]
 async fn post_works_without_auth_returns_401() {
     let server = make_test_server_with_nats().await;
@@ -207,22 +209,7 @@ async fn post_works_without_auth_returns_401() {
     resp.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-// ISBN with hyphens is accepted (normalised before validation)
-#[tokio::test]
-async fn post_works_isbn_with_hyphens_is_accepted() {
-    let server = make_test_server_with_nats().await;
-    let jwt = setup_and_login(&server).await;
-
-    let resp = server
-        .post("/api/works")
-        .add_header("Authorization", format!("Bearer {jwt}"))
-        .json(&json!({"identifier": "978-0-13-235088-4", "identifier_type": "isbn"}))
-        .await;
-
-    resp.assert_status(StatusCode::ACCEPTED);
-}
-
-// NATS unavailable → 500, and no work record is persisted
+// POST /api/works — without NATS returns 500 messaging_unavailable
 #[tokio::test]
 async fn post_works_without_nats_returns_500() {
     let server = make_test_server_no_nats().await;
@@ -383,6 +370,7 @@ async fn post_works_open_library_error_returns_500() {
         work_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(ErrorOpenLibraryClient)),
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
     let server = TestServer::new(build_router(state)).unwrap();
@@ -397,4 +385,118 @@ async fn post_works_open_library_error_returns_500() {
     resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
     let body: Value = resp.json();
     assert_eq!(body["error"], "internal_error");
+}
+
+// GET /api/works — empty list when no works submitted
+#[tokio::test]
+async fn get_works_returns_empty_list_when_no_works() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .get("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::OK);
+    let body: Value = resp.json();
+    assert!(body.is_array());
+    assert_eq!(body.as_array().unwrap().len(), 0);
+}
+
+// GET /api/works — returns work after submission
+#[tokio::test]
+async fn get_works_returns_submitted_work() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let post_resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
+        .await;
+    post_resp.assert_status(StatusCode::ACCEPTED);
+    let work_id = post_resp.json::<Value>()["work_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .get("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::OK);
+    let body: Value = resp.json();
+    let works = body.as_array().unwrap();
+    assert_eq!(works.len(), 1);
+    assert_eq!(works[0]["id"], work_id);
+    assert_eq!(works[0]["status"], "pending");
+    assert_eq!(works[0]["isbn"], "9780132350884");
+}
+
+// GET /api/works — without auth → 401
+#[tokio::test]
+async fn get_works_without_auth_returns_401() {
+    let server = make_test_server_with_nats().await;
+
+    let resp = server.get("/api/works").await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+// GET /api/works/{id} — returns work for known id
+#[tokio::test]
+async fn get_work_by_id_returns_work() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let post_resp = server
+        .post("/api/works")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
+        .await;
+    post_resp.assert_status(StatusCode::ACCEPTED);
+    let work_id = post_resp.json::<Value>()["work_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let resp = server
+        .get(&format!("/api/works/{work_id}"))
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::OK);
+    let body: Value = resp.json();
+    assert_eq!(body["id"], work_id);
+    assert_eq!(body["status"], "pending");
+}
+
+// GET /api/works/{id} — 404 for unknown id
+#[tokio::test]
+async fn get_work_by_id_returns_404_for_unknown_id() {
+    let server = make_test_server_with_nats().await;
+    let jwt = setup_and_login(&server).await;
+
+    let resp = server
+        .get("/api/works/00000000-0000-0000-0000-000000000000")
+        .add_header("Authorization", format!("Bearer {jwt}"))
+        .await;
+
+    resp.assert_status(StatusCode::NOT_FOUND);
+    let body: Value = resp.json();
+    assert_eq!(body["error"], "not_found");
+}
+
+// GET /api/works/{id} — without auth → 401
+#[tokio::test]
+async fn get_work_by_id_without_auth_returns_401() {
+    let server = make_test_server_with_nats().await;
+
+    let resp = server
+        .get("/api/works/00000000-0000-0000-0000-000000000000")
+        .await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
 }

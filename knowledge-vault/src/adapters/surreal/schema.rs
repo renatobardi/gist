@@ -29,8 +29,9 @@ DEFINE FIELD IF NOT EXISTS status         ON work TYPE string DEFAULT 'pending';
 DEFINE FIELD IF NOT EXISTS error_msg      ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS updated_at     ON work TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS work_isbn ON work COLUMNS isbn UNIQUE;
-DEFINE INDEX IF NOT EXISTS work_ol_id ON work COLUMNS open_library_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_isbn       ON work COLUMNS isbn UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_ol_id      ON work COLUMNS open_library_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_created_at ON work COLUMNS created_at;
 "#;
 
 pub async fn run_migrations(

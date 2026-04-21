@@ -8,6 +8,9 @@ pub struct Work {
     pub isbn: Option<String>,
     pub open_library_id: Option<String>,
     pub status: String,
+    pub error_msg: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug)]
