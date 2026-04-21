@@ -6,6 +6,20 @@ All notable changes to Knowledge Vault will be documented in this file.
 
 ### Added
 
+#### Submit Book by ISBN (2026-04-21)
+- `POST /api/works` endpoint: accepts ISBN-10 or ISBN-13 for book submission
+- Automatic metadata fetching from Open Library API
+- Duplicate ISBN detection (returns 409 Conflict)
+- Asynchronous processing of book data for knowledge graph generation
+- NATS `discovery.requested` event published upon successful ingestion
+
+### Documentation
+- Added `api-works.md` for `POST /api/works` endpoint with request/response details
+- Updated `architecture.md` API Design section to include `works` endpoints
+- Updated `README.md` with link to Works API documentation
+
+### Added
+
 #### Personal Access Tokens (2026-04-20)
 - Personal Access Token (PAT) generation and management: `POST /api/tokens`, `GET /api/tokens`, `DELETE /api/tokens/{id}`
 - PAT format: `ens_` prefix followed by 32 random bytes (base64url-encoded)

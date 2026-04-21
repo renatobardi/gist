@@ -493,6 +493,9 @@ Revoked tokens are immediately rejected with 401 on subsequent requests.
 
 See [PAT API Reference](/_bmad/docs/api-pat.md) and [PAT User Guide](/_bmad/docs/pat-user-guide.md) for detailed documentation.
 
+### Works API
+- [Works API Reference](/_bmad/docs/api-works.md) - Documentation for submitting and managing works.
+
 ### Security Headers
 All responses include the following security headers:
 - `X-Content-Type-Options: nosniff` — Prevents MIME type sniffing
