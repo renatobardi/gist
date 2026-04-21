@@ -362,6 +362,35 @@ Revoked tokens are immediately rejected with 401 on subsequent use.
 
 ## 🔑 API Reference
 
+### Health Check Endpoint
+
+**Check service health and connectivity**
+```
+GET /health
+Response: 200 OK
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "db": "connected"
+}
+```
+
+**When database is unreachable**
+```
+GET /health
+Response: 503 Service Unavailable
+{
+  "status": "degraded",
+  "version": "0.1.0",
+  "db": "disconnected"
+}
+```
+
+Use this endpoint to:
+- Monitor service availability in deployment pipelines (health checks, load balancers)
+- Verify database connectivity without authentication
+- Track the deployed binary version
+
 ### Environment Variables
 | Variable | Description | Required | Default | Example |
 |----------|-------------|----------|---------|---------|
