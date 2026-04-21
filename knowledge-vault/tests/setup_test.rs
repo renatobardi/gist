@@ -7,6 +7,7 @@ use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
+        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
@@ -21,12 +22,16 @@ async fn make_test_server() -> TestServer {
     let user_repo = Arc::new(SurrealUserRepo::new(db.clone()));
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
-    let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let work_repo = Arc::new(SurrealWorkRepo::new(db.clone()));
+    let insight_repo = Arc::new(SurrealInsightRepo::new(db.clone()));
+    let concept_repo = Arc::new(SurrealConceptRepo::new(db));
     let state = AppState {
         user_repo,
         login_attempt_repo,
         token_repo,
         work_repo,
+        insight_repo,
+        concept_repo,
         message_publisher: None,
         open_library_client: None,
         ws_broadcaster: WsBroadcaster::new(),

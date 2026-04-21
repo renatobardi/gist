@@ -2116,6 +2116,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "email_address",
+ "futures",
  "http",
  "jsonwebtoken",
  "rand 0.8.6",
