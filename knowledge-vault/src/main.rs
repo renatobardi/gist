@@ -8,6 +8,7 @@ use tracing_subscriber::EnvFilter;
 
 use adapters::{
     nats::publisher::NatsPublisher,
+    openlib::OpenLibraryClient,
     surreal::{
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
@@ -56,12 +57,15 @@ async fn main() -> anyhow::Result<()> {
     let login_attempt_repo = Arc::new(SurrealLoginAttemptRepo::new(db.clone()));
     let token_repo = Arc::new(SurrealTokenRepo::new(db.clone()));
     let work_repo = Arc::new(SurrealWorkRepo::new(db));
+    let open_library_client: Option<Arc<dyn knowledge_vault::ports::external::OpenLibraryPort>> =
+        Some(Arc::new(OpenLibraryClient::new()));
     let state = AppState {
         user_repo,
         login_attempt_repo,
         token_repo,
         work_repo,
         message_publisher,
+        open_library_client,
         jwt_secret,
     };
     let router = build_router(state);

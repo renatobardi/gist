@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::ports::external::OpenLibraryPort;
 use crate::ports::messaging::MessagePublisher;
 use crate::ports::repository::{LoginAttemptRepo, TokenRepo, UserRepo, WorkRepo};
 
@@ -10,5 +11,6 @@ pub struct AppState {
     pub token_repo: Arc<dyn TokenRepo>,
     pub work_repo: Arc<dyn WorkRepo>,
     pub message_publisher: Option<Arc<dyn MessagePublisher>>,
+    pub open_library_client: Option<Arc<dyn OpenLibraryPort>>,
     pub jwt_secret: String,
 }
