@@ -395,4 +395,3 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
   </script>
 </body>
 </html>"#;
-

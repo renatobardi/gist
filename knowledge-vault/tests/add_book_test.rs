@@ -8,11 +8,12 @@ use surrealdb::{engine::local::Mem, Surreal};
 
 use knowledge_vault::{
     adapters::surreal::{
+        concept_repo::SurrealConceptRepo, insight_repo::SurrealInsightRepo,
         login_attempt_repo::SurrealLoginAttemptRepo, schema::run_migrations,
         token_repo::SurrealTokenRepo, user_repo::SurrealUserRepo, work_repo::SurrealWorkRepo,
     },
     ports::messaging::MessagePublisher,
-    web::{router::build_router, state::AppState},
+    web::{router::build_router, state::AppState, ws_broadcaster::WsBroadcaster},
 };
 
 struct NoopPublisher;
@@ -33,8 +34,12 @@ async fn make_test_server() -> TestServer {
         user_repo: Arc::new(SurrealUserRepo::new(db.clone())),
         login_attempt_repo: Arc::new(SurrealLoginAttemptRepo::new(db.clone())),
         token_repo: Arc::new(SurrealTokenRepo::new(db.clone())),
-        work_repo: Arc::new(SurrealWorkRepo::new(db)),
+        work_repo: Arc::new(SurrealWorkRepo::new(db.clone())),
+        insight_repo: Arc::new(SurrealInsightRepo::new(db.clone())),
+        concept_repo: Arc::new(SurrealConceptRepo::new(db)),
         message_publisher: Some(Arc::new(NoopPublisher)),
+        open_library_client: None,
+        ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
 
