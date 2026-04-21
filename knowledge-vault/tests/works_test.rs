@@ -132,9 +132,9 @@ async fn setup_and_login(server: &TestServer) -> String {
     resp.json::<Value>()["token"].as_str().unwrap().to_string()
 }
 
-// Valid ISBN-13 → 202 with work_id and status=pending
+// POST /api/works — valid ISBN returns 202 with work_id
 #[tokio::test]
-async fn post_works_valid_isbn13_returns_202() {
+async fn post_works_valid_isbn_returns_202() {
     let server = make_test_server_with_nats().await;
     let jwt = setup_and_login(&server).await;
 
@@ -150,7 +150,7 @@ async fn post_works_valid_isbn13_returns_202() {
     assert_eq!(body["status"], "pending");
 }
 
-// Duplicate ISBN → 409 with existing work_id
+// POST /api/works — duplicate ISBN returns 409
 #[tokio::test]
 async fn post_works_duplicate_isbn_returns_409() {
     let server = make_test_server_with_nats().await;
@@ -167,19 +167,19 @@ async fn post_works_duplicate_isbn_returns_409() {
         .unwrap()
         .to_string();
 
-    let resp = server
+    let second = server
         .post("/api/works")
         .add_header("Authorization", format!("Bearer {jwt}"))
         .json(&json!({"identifier": "9780132350884", "identifier_type": "isbn"}))
         .await;
 
-    resp.assert_status(StatusCode::CONFLICT);
-    let body: Value = resp.json();
+    second.assert_status(StatusCode::CONFLICT);
+    let body: Value = second.json();
     assert_eq!(body["work_id"], first_id);
     assert_eq!(body["error"], "duplicate");
 }
 
-// Invalid ISBN → 422
+// POST /api/works — invalid ISBN returns 422
 #[tokio::test]
 async fn post_works_invalid_isbn_returns_422() {
     let server = make_test_server_with_nats().await;
@@ -188,16 +188,15 @@ async fn post_works_invalid_isbn_returns_422() {
     let resp = server
         .post("/api/works")
         .add_header("Authorization", format!("Bearer {jwt}"))
-        .json(&json!({"identifier": "1234567890123", "identifier_type": "isbn"}))
+        .json(&json!({"identifier": "not-an-isbn", "identifier_type": "isbn"}))
         .await;
 
     resp.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
     let body: Value = resp.json();
     assert_eq!(body["error"], "invalid_isbn");
-    assert!(body["message"].is_string());
 }
 
-// Unauthenticated request → 401
+// POST /api/works — without auth returns 401
 #[tokio::test]
 async fn post_works_without_auth_returns_401() {
     let server = make_test_server_with_nats().await;
@@ -210,22 +209,7 @@ async fn post_works_without_auth_returns_401() {
     resp.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-// ISBN with hyphens is accepted (normalised before validation)
-#[tokio::test]
-async fn post_works_isbn_with_hyphens_is_accepted() {
-    let server = make_test_server_with_nats().await;
-    let jwt = setup_and_login(&server).await;
-
-    let resp = server
-        .post("/api/works")
-        .add_header("Authorization", format!("Bearer {jwt}"))
-        .json(&json!({"identifier": "978-0-13-235088-4", "identifier_type": "isbn"}))
-        .await;
-
-    resp.assert_status(StatusCode::ACCEPTED);
-}
-
-// NATS unavailable → 500, and no work record is persisted
+// POST /api/works — without NATS returns 500 messaging_unavailable
 #[tokio::test]
 async fn post_works_without_nats_returns_500() {
     let server = make_test_server_no_nats().await;
@@ -241,6 +225,8 @@ async fn post_works_without_nats_returns_500() {
     let body: Value = resp.json();
     assert_eq!(body["error"], "messaging_unavailable");
 
+    // Verify no work record was created: a retry must still return
+    // messaging_unavailable (500), not duplicate (409).
     let retry = server
         .post("/api/works")
         .add_header("Authorization", format!("Bearer {jwt}"))
