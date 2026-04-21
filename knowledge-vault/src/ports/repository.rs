@@ -1,3 +1,4 @@
+use crate::domain::concept::{ConceptDetail, GraphData};
 use crate::domain::insight::{ExtractedConcept, GeminiResponse, InsightDetail};
 use crate::domain::user::{PersonalAccessToken, User};
 use crate::domain::work::Work;
@@ -101,6 +102,16 @@ pub trait GraphWriteRepo: Send + Sync {
         work_id: &str,
         gemini_response: &GeminiResponse,
     ) -> Result<(), RepoError>;
+}
+
+/// Read-side graph queries: retrieve concepts and edges for the graph visualization.
+#[async_trait::async_trait]
+pub trait GraphReadRepo: Send + Sync {
+    /// Returns all concepts (optionally filtered by domain) and the edges between them.
+    async fn get_graph(&self, domains: Option<Vec<String>>) -> Result<GraphData, RepoError>;
+
+    /// Returns the concept, the books that mention it, and its related concepts.
+    async fn get_concept_detail(&self, id: &str) -> Result<Option<ConceptDetail>, RepoError>;
 }
 
 #[async_trait::async_trait]

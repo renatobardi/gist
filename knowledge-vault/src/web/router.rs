@@ -9,6 +9,7 @@ use super::{
         add_book::get_add_book,
         auth::post_login,
         failed_works::get_failed_works,
+        graph::{get_api_concept_by_id, get_api_graph, get_concept_detail_page, get_graph_page},
         health::get_health,
         library::get_library,
         setup::{get_setup, get_setup_json, post_setup_form, post_setup_json},
@@ -36,6 +37,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/works/{id}/retry", post(post_works_retry))
         .route("/api/works/{id}/insight", get(get_work_insight))
         .route("/works/{id}", get(get_work_detail_page))
+        .route("/api/graph", get(get_api_graph))
+        .route("/api/concepts/{id}", get(get_api_concept_by_id))
+        .route("/graph", get(get_graph_page))
+        .route("/graph/concepts/{id}", get(get_concept_detail_page))
         .route("/failed", get(get_failed_works))
         .route("/ws", get(ws_handler))
         .route("/add", get(get_add_book))
