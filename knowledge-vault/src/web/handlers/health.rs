@@ -12,8 +12,7 @@ use crate::{config::VERSION, web::state::AppState};
 pub struct HealthResponse {
     pub status: &'static str,
     pub version: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub db: Option<&'static str>,
+    pub db: &'static str,
 }
 
 pub async fn get_health(State(state): State<AppState>) -> Response {
@@ -25,7 +24,7 @@ pub async fn get_health(State(state): State<AppState>) -> Response {
             Json(HealthResponse {
                 status: "ok",
                 version: VERSION,
-                db: Some("connected"),
+                db: "connected",
             }),
         )
             .into_response()
@@ -35,7 +34,7 @@ pub async fn get_health(State(state): State<AppState>) -> Response {
             Json(HealthResponse {
                 status: "degraded",
                 version: VERSION,
-                db: Some("disconnected"),
+                db: "disconnected",
             }),
         )
             .into_response()
