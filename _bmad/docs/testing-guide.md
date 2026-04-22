@@ -405,7 +405,7 @@ curl http://localhost:8080/health
 4. Copy token (shown only once)
 5. Verify token can be used for authentication:
    ```bash
-   curl -H "Authorization: Bearer ens_..." http://localhost:8080/api/works
+   curl -H "Authorization: Bearer <YOUR-PAT-TOKEN>" http://localhost:8080/api/works
    ```
 
 **Expected Outcome**:

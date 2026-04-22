@@ -6,9 +6,3 @@
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/api-pat.md:curl-auth-header:162
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:36
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:192
-
-# Operations and testing guides — example API key patterns (AIzaSyD...) in documentation
-# These are placeholder examples for documentation, not real secrets, replaced in subsequent commit
-2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/operations-guide.md:generic-api-key:40
-2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/operations-guide.md:generic-api-key:103
-2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/operations-guide.md:generic-api-key:128
