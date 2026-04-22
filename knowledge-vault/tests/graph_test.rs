@@ -195,7 +195,11 @@ async fn get_api_graph_returns_all_nodes_without_filter() {
     let nodes = body["nodes"].as_array().unwrap();
     assert_eq!(nodes.len(), 4, "expected 4 nodes across 2 domains");
     let edges = body["edges"].as_array().unwrap();
-    assert_eq!(edges.len(), 0, "expected 0 edges when no related concepts seeded");
+    assert_eq!(
+        edges.len(),
+        0,
+        "expected 0 edges when no related concepts seeded"
+    );
 }
 
 #[tokio::test]
