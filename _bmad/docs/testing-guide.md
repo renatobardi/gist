@@ -315,7 +315,7 @@ Manual testing validates the application through the user interface and API endp
 ```bash
 # Set test environment variables
 export KV_JWT_SECRET="test-secret-min-32-chars-for-testing"
-export KV_GEMINI_API_KEY="AIzaSyD..."  # Your actual API key
+export KV_GEMINI_API_KEY="your-gemini-api-key"  # Your actual API key
 export KV_DATA_DIR="./test-data"
 export KV_PORT="8080"
 

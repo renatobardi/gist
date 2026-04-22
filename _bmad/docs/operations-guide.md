@@ -36,8 +36,8 @@ These variables must be set before starting the service:
 
 | Variable | Purpose | Required | Format | Example |
 |----------|---------|----------|--------|---------|
-| `KV_JWT_SECRET` | HS256 signing key | Yes | String, 32+ chars | `my-super-secret-key-min-32-chars` |
-| `KV_GEMINI_API_KEY` | Google Gemini API key | Yes | API key | `AIzaSyD...` |
+| `KV_JWT_SECRET` | HS256 signing key | Yes | String, 32+ chars | `your-secret-key-min-32-chars` |
+| `KV_GEMINI_API_KEY` | Google Gemini API key | Yes | API key | `your-gemini-api-key` |
 | `KV_DATA_DIR` | Data storage directory | No | Path | `/var/lib/knowledge-vault` |
 | `KV_PORT` | HTTP server port | No | Integer | `8080` |
 
@@ -99,8 +99,8 @@ sudo chmod 700 /var/lib/knowledge-vault
 Set variables in your shell session or via systemd service file:
 
 ```bash
-export KV_JWT_SECRET="your-secret-key-min-32-characters-long"
-export KV_GEMINI_API_KEY="AIzaSyD..."
+export KV_JWT_SECRET="your-secret-key-min-32-characters"
+export KV_GEMINI_API_KEY="your-gemini-api-key"
 export KV_DATA_DIR="/var/lib/knowledge-vault"
 export KV_PORT="8080"
 ```
@@ -124,8 +124,8 @@ Restart=on-failure
 RestartSec=5
 
 # Environment variables
-Environment="KV_JWT_SECRET=your-secret-key-min-32-characters-long"
-Environment="KV_GEMINI_API_KEY=AIzaSyD..."
+Environment="KV_JWT_SECRET=your-secret-key-min-32-characters"
+Environment="KV_GEMINI_API_KEY=your-gemini-api-key"
 Environment="KV_DATA_DIR=/var/lib/knowledge-vault"
 Environment="KV_PORT=8080"
 
@@ -207,8 +207,8 @@ sudo journalctl -u knowledge-vault -n 50
 
 ```bash
 # Set environment variables
-export KV_JWT_SECRET="dev-secret-min-32-characters-here"
-export KV_GEMINI_API_KEY="your-api-key"
+export KV_JWT_SECRET="your-secret-key-min-32-characters"
+export KV_GEMINI_API_KEY="your-gemini-api-key"
 export KV_DATA_DIR="./data"
 export KV_PORT="8080"
 
