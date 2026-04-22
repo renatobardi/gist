@@ -107,6 +107,44 @@ jobs:
           $REMOTE_SSH "systemctl status knowledge-vault --no-pager" || true
           exit 1
 
+      - name: Setup Caddy HTTPS
+        run: |
+          REMOTE_HOST="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          # Upload the Caddyfile
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            infra/Caddyfile "${REMOTE_HOST}:/tmp/Caddyfile"
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$REMOTE_HOST" '
+            set -e
+
+            # Open firewall ports (idempotent — skip if rule already exists)
+            sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null \
+              || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+            sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null \
+              || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+            sudo netfilter-persistent save 2>/dev/null || true
+
+            # Install Caddy only if not already installed
+            if ! command -v caddy &>/dev/null; then
+              sudo apt-get install -y \
+                debian-keyring debian-archive-keyring apt-transport-https curl
+              curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" \
+                | sudo gpg --batch --yes --dearmor \
+                    -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+              curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt" \
+                | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+              sudo apt-get update -q
+              sudo apt-get install -y caddy
+            fi
+
+            # Deploy Caddyfile and reload
+            sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
+            sudo systemctl enable caddy
+            sudo systemctl reload-or-restart caddy
+            sudo systemctl is-active caddy && echo "Caddy is active"
+          '
+
       - name: Cleanup SSH key
         if: always()
         run: |
