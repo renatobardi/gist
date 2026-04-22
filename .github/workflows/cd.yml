@@ -12,6 +12,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  NATS_VERSION: "v2.11.2"
 
 jobs:
   build:
@@ -70,28 +71,49 @@ jobs:
 
       - name: Provision VM (NATS)
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- "${NATS_VERSION}" << 'ENDSSH'
             set -euo pipefail
+            NATS_VERSION="$1"
 
             if systemctl is-active --quiet nats 2>/dev/null; then
               echo "NATS already running — skipping install"
               exit 0
             fi
 
-            echo "Installing NATS server..."
-            NATS_VERSION=$(curl -s https://api.github.com/repos/nats-io/nats-server/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+            echo "Installing NATS server ${NATS_VERSION}..."
             curl -sL "https://github.com/nats-io/nats-server/releases/download/${NATS_VERSION}/nats-server-${NATS_VERSION}-linux-arm64.tar.gz" \
               | tar xz -C /tmp "nats-server-${NATS_VERSION}-linux-arm64/nats-server"
-            sudo mv "/tmp/nats-server-${NATS_VERSION}-linux-arm64/nats-server" /usr/local/bin/nats-server
-            sudo chmod +x /usr/local/bin/nats-server
-            sudo restorecon -v /usr/local/bin/nats-server 2>/dev/null || true
 
-            printf '[Unit]\nDescription=NATS Server\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/nats-server -js\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n' \
-              | sudo tee /etc/systemd/system/nats.service > /dev/null
+            # 'sudo install' cria o arquivo diretamente no destino, herdando
+            # o contexto SELinux bin_t — evita ter que rodar restorecon.
+            sudo install -m 755 "/tmp/nats-server-${NATS_VERSION}-linux-arm64/nats-server" /usr/local/bin/nats-server
+            rm -rf "/tmp/nats-server-${NATS_VERSION}-linux-arm64"
+
+            sudo tee /etc/systemd/system/nats.service > /dev/null << 'EOF'
+[Unit]
+Description=NATS Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nats-server -js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
             sudo systemctl daemon-reload
             sudo systemctl enable --now nats
-            echo "NATS installed: $(/usr/local/bin/nats-server --version)"
+
+            if ! systemctl is-active --quiet nats; then
+              echo "NATS failed to start — dumping journal:"
+              sudo journalctl -u nats -n 20 --no-pager
+              exit 1
+            fi
+            echo "NATS active: $(/usr/local/bin/nats-server --version)"
           ENDSSH
 
       - name: Deploy to Oracle Cloud
