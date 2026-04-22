@@ -9,5 +9,5 @@
 
 # Operations and testing guides — documentation examples with placeholder patterns
 # These files contain educational example code with placeholder values, not real secrets
-2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/operations-guide.md
-2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/testing-guide.md
+2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/testing-guide.md:curl-auth-header:705
+2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/testing-guide.md:generic-api-key:463
