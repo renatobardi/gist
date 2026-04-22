@@ -2,6 +2,61 @@
 
 This directory contains infrastructure-as-code and operational documentation for deploying and managing the Knowledge Vault service on Oracle Cloud ARM64 VMs.
 
+## HTTPS Setup (gist.oute.pro)
+
+The application is served over HTTPS via [Caddy](https://caddyserver.com/), which handles TLS automatically using Let's Encrypt.
+
+### Prerequisites
+
+Before running the setup script, make sure:
+
+1. **DNS A record** points `gist.oute.pro` to the Oracle Cloud VM public IP
+2. **Oracle Cloud security list** allows inbound TCP on ports **80** and **443** (required for Let's Encrypt HTTP challenge and HTTPS traffic)
+3. The `knowledge-vault` service is already running on `localhost:8080`
+
+### One-time Caddy installation
+
+```bash
+bash infra/setup-caddy.sh
+```
+
+This script installs Caddy from the official repository, deploys `infra/Caddyfile`, and starts the `caddy` systemd service. Caddy will automatically obtain and renew the TLS certificate for `gist.oute.pro`.
+
+### Verify HTTPS
+
+```bash
+curl -s https://gist.oute.pro/health
+# Expected: {"status":"ok","version":"...","db":"connected"}
+```
+
+### Updating the Caddy config
+
+If you need to change the domain or add routing rules:
+
+```bash
+sudo cp infra/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+### Oracle Cloud firewall rules
+
+In the Oracle Cloud console, add ingress rules to the VM's security list:
+
+| Protocol | Port | Source CIDR | Purpose |
+|----------|------|-------------|---------|
+| TCP | 80 | 0.0.0.0/0 | Let's Encrypt HTTP challenge |
+| TCP | 443 | 0.0.0.0/0 | HTTPS traffic |
+
+You must also open these ports in the OS-level firewall (Ubuntu ufw or iptables):
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+---
+
 ## Deployment Architecture
 
 Knowledge Vault runs as a single systemd service (`knowledge-vault.service`) on a VM with:

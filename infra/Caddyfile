@@ -1,0 +1,3 @@
+gist.oute.pro {
+	reverse_proxy localhost:8080
+}
