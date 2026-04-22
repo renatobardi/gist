@@ -68,6 +68,32 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
+      - name: Provision VM (NATS)
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" << 'ENDSSH'
+            set -euo pipefail
+
+            if systemctl is-active --quiet nats 2>/dev/null; then
+              echo "NATS already running — skipping install"
+              exit 0
+            fi
+
+            echo "Installing NATS server..."
+            NATS_VERSION=$(curl -s https://api.github.com/repos/nats-io/nats-server/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+            curl -sL "https://github.com/nats-io/nats-server/releases/download/${NATS_VERSION}/nats-server-${NATS_VERSION}-linux-arm64.tar.gz" \
+              | tar xz -C /tmp "nats-server-${NATS_VERSION}-linux-arm64/nats-server"
+            sudo mv "/tmp/nats-server-${NATS_VERSION}-linux-arm64/nats-server" /usr/local/bin/nats-server
+            sudo chmod +x /usr/local/bin/nats-server
+            sudo restorecon -v /usr/local/bin/nats-server 2>/dev/null || true
+
+            printf '[Unit]\nDescription=NATS Server\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/nats-server -js\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n' \
+              | sudo tee /etc/systemd/system/nats.service > /dev/null
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable --now nats
+            echo "NATS installed: $(/usr/local/bin/nats-server --version)"
+          ENDSSH
+
       - name: Deploy to Oracle Cloud
         run: |
           REMOTE_HOST="${DEPLOY_USER}@${DEPLOY_HOST}"
