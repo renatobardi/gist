@@ -175,12 +175,6 @@ async fn get_api_graph_authenticated_empty_returns_200() {
 #[tokio::test]
 async fn get_api_graph_unauthenticated_returns_401() {
     let server = make_test_server().await;
-    server
-        .post("/api/setup")
-        .json(&json!({"email": "admin@example.com", "password": "validpassword1"}))
-        .await
-        .assert_status(StatusCode::CREATED);
-
     let res = server.get("/api/graph").await;
     assert_eq!(res.status_code(), StatusCode::UNAUTHORIZED);
 }
@@ -200,6 +194,8 @@ async fn get_api_graph_returns_all_nodes_without_filter() {
     let body = res.json::<serde_json::Value>();
     let nodes = body["nodes"].as_array().unwrap();
     assert_eq!(nodes.len(), 4, "expected 4 nodes across 2 domains");
+    let edges = body["edges"].as_array().unwrap();
+    assert_eq!(edges.len(), 0, "expected 0 edges when no related concepts seeded");
 }
 
 #[tokio::test]
