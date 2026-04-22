@@ -7,7 +7,7 @@ use tower::ServiceBuilder;
 use super::{
     handlers::{
         add_book::get_add_book,
-        auth::post_login,
+        auth::{get_login, post_login},
         failed_works::get_failed_works,
         graph::{get_api_concept_by_id, get_api_graph, get_concept_detail_page, get_graph_page},
         health::get_health,
@@ -29,6 +29,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/health", get(get_health))
         .route("/setup", get(get_setup).post(post_setup_form))
         .route("/api/setup", get(get_setup_json).post(post_setup_json))
+        .route("/login", get(get_login))
         .route("/auth/login", post(post_login))
         .route("/api/tokens", post(post_token).get(get_tokens))
         .route("/api/tokens/{id}", delete(delete_token))

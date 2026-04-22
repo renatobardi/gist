@@ -2,7 +2,7 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{
     extract::State,
     http::{header, StatusCode},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
     Json,
 };
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -35,6 +35,10 @@ pub struct ErrorResponse {
 pub struct RateLimitResponse {
     pub error: String,
     pub retry_after_seconds: u64,
+}
+
+pub async fn get_login() -> impl IntoResponse {
+    Html(LOGIN_HTML)
 }
 
 pub async fn post_login(State(state): State<AppState>, Json(input): Json<LoginInput>) -> Response {
@@ -199,3 +203,145 @@ async fn compute_retry_after(state: &AppState, email: &str) -> u64 {
         _ => LOCKOUT_WINDOW_SECONDS,
     }
 }
+
+const LOGIN_HTML: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Vault — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'BMW Type Next', Inter, Arial, sans-serif;
+      background: #262626;
+      color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #3c3c3c;
+      border-radius: 4px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+    p.subtitle {
+      color: #8c8c8c;
+      margin: 0 0 2rem;
+      font-size: 0.9rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #c8c8c8;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #3c3c3c;
+      border-radius: 2px;
+      background: #262626;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+      font-family: inherit;
+    }
+    input:focus { outline: 3px solid #0653b6; outline-offset: 2px; }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #1c69d4;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #0653b6; }
+    button:focus { outline: 3px solid #0653b6; outline-offset: 2px; }
+    button:disabled { background: #3c3c3c; cursor: not-allowed; }
+    .error {
+      background: #3d1515;
+      border: 1px solid #7a2020;
+      border-radius: 2px;
+      padding: 0.6rem 0.75rem;
+      color: #ff8080;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .error.visible { display: block; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Knowledge Vault</h1>
+    <p class="subtitle">Sign in to your account.</p>
+    <div id="error" class="error" role="alert" aria-live="polite"></div>
+    <form id="form">
+      <label for="email">Email address</label>
+      <input id="email" type="email" name="email" required autocomplete="email" />
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" required autocomplete="current-password" />
+      <button type="submit" id="btn">Sign in</button>
+    </form>
+  </main>
+  <script>
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const errorEl = document.getElementById('error');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      errorEl.classList.remove('visible');
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+
+        if (res.ok) {
+          window.location.href = '/';
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          const secs = data.retry_after_seconds ?? 300;
+          const mins = Math.ceil(secs / 60);
+          errorEl.textContent = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
+        } else {
+          errorEl.textContent = data.message ?? 'Invalid email or password.';
+        }
+        errorEl.classList.add('visible');
+      } catch {
+        errorEl.textContent = 'Network error. Please try again.';
+        errorEl.classList.add('visible');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>"#;
