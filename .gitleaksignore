@@ -6,3 +6,8 @@
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/api-pat.md:curl-auth-header:162
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:36
 0aa04ab16a92defb75d0df24dd60f7138e5c7284:_bmad/docs/pat-user-guide.md:generic-api-key:192
+
+# Operations and testing guides — documentation examples with placeholder patterns
+# These files contain educational example code with placeholder values, not real secrets
+2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/testing-guide.md:curl-auth-header:705
+2fc364ddefcb3b970465f7856341b60306e5516b:_bmad/docs/testing-guide.md:generic-api-key:463
