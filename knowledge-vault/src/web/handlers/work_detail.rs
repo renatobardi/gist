@@ -40,11 +40,11 @@ pub async fn get_work_detail_page(
 fn render_detail_page(work_id: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Book Detail</title>
+  <title>Knowledge Vault — Detalhes do Livro</title>
   <style>
     *, *::before, *::after {{ box-sizing: border-box; }}
     body {{
@@ -244,7 +244,7 @@ fn render_detail_page(work_id: &str) -> String {
 <body>
   <header>
     <h1>Knowledge Vault</h1>
-    <a href="/">&#8592; Library</a>
+    <a href="/">&#8592; Biblioteca</a>
   </header>
   <main id="app">
     <!-- Skeleton loader while fetching -->
@@ -294,22 +294,22 @@ fn render_detail_page(work_id: &str) -> String {
     function renderWork(work, insight) {{
       var isbnHtml = work.isbn ? '<p class="meta-isbn">ISBN: ' + esc(work.isbn) + '</p>' : '';
       var titleText = work.title || 'Untitled';
-      var authorText = work.author ? 'by ' + esc(work.author) : '';
+      var authorText = work.author ? 'por ' + esc(work.author) : '';
 
       var statusBadge = '<span class="status-badge ' + statusClass(work.status) + '">' + esc(work.status) + '</span>';
 
       var insightHtml = '';
       if (work.status === 'done' && insight) {{
-        // Summary section
+        // Seção de resumo
         insightHtml += '<div class="section">';
-        insightHtml += '<p class="section-title">Summary</p>';
+        insightHtml += '<p class="section-title">Resumo</p>';
         insightHtml += '<div class="insight-box"><p class="insight-summary">' + esc(insight.summary) + '</p></div>';
         insightHtml += '</div>';
 
-        // Key points
+        // Pontos principais
         if (insight.key_points && insight.key_points.length > 0) {{
           insightHtml += '<div class="section">';
-          insightHtml += '<p class="section-title">Key Points</p>';
+          insightHtml += '<p class="section-title">Pontos Principais</p>';
           insightHtml += '<ul class="key-points">';
           insight.key_points.forEach(function(pt) {{
             insightHtml += '<li>' + esc(pt) + '</li>';
@@ -321,7 +321,7 @@ fn render_detail_page(work_id: &str) -> String {
         if (insight.concepts && insight.concepts.length > 0) {{
           var sorted = insight.concepts.slice().sort(function(a, b) {{ return b.relevance_weight - a.relevance_weight; }});
           insightHtml += '<div class="section">';
-          insightHtml += '<p class="section-title">Extracted Concepts (' + sorted.length + ')</p>';
+          insightHtml += '<p class="section-title">Conceitos Extraídos (' + sorted.length + ')</p>';
           insightHtml += '<div class="concept-grid">';
           sorted.forEach(function(c) {{
             var pct = Math.min(100, Math.round(c.relevance_weight * 100));
@@ -330,21 +330,21 @@ fn render_detail_page(work_id: &str) -> String {
             insightHtml += '<p class="concept-name">' + esc(c.display_name) + '</p>';
             insightHtml += '<p class="concept-domain" style="color:' + domColor + '">' + esc(c.domain) + '</p>';
             insightHtml += '<div class="relevance-bar-track"><div class="relevance-bar-fill" style="width:' + pct + '%"></div></div>';
-            insightHtml += '<p class="relevance-label">Relevance: ' + (c.relevance_weight).toFixed(2) + '</p>';
+            insightHtml += '<p class="relevance-label">Relevância: ' + (c.relevance_weight).toFixed(2) + '</p>';
             insightHtml += '</div>';
           }});
           insightHtml += '</div></div>';
         }}
       }} else if (work.status === 'done') {{
-        insightHtml = '<p class="processing-notice">Insight data is not yet available for this book.</p>';
+        insightHtml = '<p class="processing-notice">Dados de insight ainda não disponíveis para este livro.</p>';
       }} else if (work.status === 'processing') {{
-        insightHtml = '<p class="processing-notice">&#9203; Processing — extracting insights from this book. This page will update when ready.</p>';
+        insightHtml = '<p class="processing-notice">&#9203; Processando — extraindo insights deste livro. Esta página será atualizada quando pronto.</p>';
       }} else if (work.status === 'pending') {{
-        insightHtml = '<p class="processing-notice">&#9203; In queue — insight extraction has not started yet.</p>';
+        insightHtml = '<p class="processing-notice">&#9203; Na fila — a extração de insights ainda não começou.</p>';
       }} else if (work.status === 'failed') {{
-        var errMsg = work.error_msg ? esc(work.error_msg) : 'An error occurred during processing.';
-        insightHtml = '<div class="error-box"><strong>Processing failed:</strong> ' + errMsg + '</div>';
-        insightHtml += '<button class="retry-btn" id="retry-btn" onclick="retryWork()">Retry</button>';
+        var errMsg = work.error_msg ? esc(work.error_msg) : 'Ocorreu um erro durante o processamento.';
+        insightHtml = '<div class="error-box"><strong>Falha no processamento:</strong> ' + errMsg + '</div>';
+        insightHtml += '<button class="retry-btn" id="retry-btn" onclick="retryWork()">Tentar novamente</button>';
       }}
 
       var olLink = work.open_library_id
@@ -356,7 +356,7 @@ fn render_detail_page(work_id: &str) -> String {
         + isbnHtml
         + statusBadge
         + insightHtml
-        + '<p class="openlib-attribution">Book metadata sourced from ' + olLink + ' (CC BY 4.0).</p>';
+        + '<p class="openlib-attribution">Metadados fornecidos por ' + olLink + ' (CC BY 4.0).</p>';
     }}
 
     function retryWork() {{
@@ -376,7 +376,7 @@ fn render_detail_page(work_id: &str) -> String {
     function showError(msg) {{
       document.getElementById('skeleton').style.display = 'none';
       var content = document.getElementById('content');
-      content.innerHTML = '<div class="error-box">' + msg + '</div><p><a href="/">Back to Library</a></p>';
+      content.innerHTML = '<div class="error-box">' + msg + '</div><p><a href="/">Voltar para a Biblioteca</a></p>';
       content.style.display = 'block';
     }}
 
@@ -386,8 +386,8 @@ fn render_detail_page(work_id: &str) -> String {
 
       workPromise.then(function(r) {{
         if (!r.ok) {{
-          if (r.status === 404) {{ showError('Book not found.'); }}
-          else {{ showError('Failed to load book data.'); }}
+          if (r.status === 404) {{ showError('Livro não encontrado.'); }}
+          else {{ showError('Erro ao carregar dados do livro.'); }}
           return;
         }}
         var work = r.data;
@@ -415,7 +415,7 @@ fn render_detail_page(work_id: &str) -> String {
             content.style.display = 'block';
           }});
       }}).catch(function() {{
-        showError('Network error. Please check your connection and try again.');
+        showError('Erro de rede. Verifique sua conexão e tente novamente.');
       }});
     }}
 

@@ -85,11 +85,11 @@ pub async fn get_concept_detail_page(
 }
 
 const GRAPH_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Concept Graph</title>
+  <title>Knowledge Vault — Grafo de Conceitos</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -287,27 +287,27 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
   <header>
     <h1>Knowledge Vault</h1>
     <nav class="header-nav" aria-label="Site navigation">
-      <a href="/" class="nav-link">Library</a>
-      <a href="/graph" class="nav-link" aria-current="page" style="color:#f0f0f0;">Graph</a>
+      <a href="/" class="nav-link">Biblioteca</a>
+      <a href="/graph" class="nav-link" aria-current="page" style="color:#f0f0f0;">Grafo</a>
     </nav>
   </header>
 
-  <div class="toolbar" role="toolbar" aria-label="Graph filters and controls">
-    <span class="toolbar-label">Domain</span>
-    <div class="domain-chips" id="domain-chips" role="group" aria-label="Domain filters">
-      <button class="chip active" data-domain="all" role="checkbox" aria-checked="true">All</button>
+  <div class="toolbar" role="toolbar" aria-label="Filtros e controles do grafo">
+    <span class="toolbar-label">Domínio</span>
+    <div class="domain-chips" id="domain-chips" role="group" aria-label="Filtros por domínio">
+      <button class="chip active" data-domain="all" role="checkbox" aria-checked="true">Todos</button>
     </div>
-    <div class="zoom-controls" aria-label="Zoom controls">
-      <button class="zoom-btn" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
-      <button class="zoom-btn" id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
-      <button class="zoom-btn" id="zoom-reset" aria-label="Reset zoom" title="Reset view" style="font-size:0.75rem;width:auto;padding:0 0.5rem;">Fit</button>
+    <div class="zoom-controls" aria-label="Controles de zoom">
+      <button class="zoom-btn" id="zoom-in" aria-label="Aproximar" title="Aproximar">+</button>
+      <button class="zoom-btn" id="zoom-out" aria-label="Afastar" title="Afastar">−</button>
+      <button class="zoom-btn" id="zoom-reset" aria-label="Ajustar visualização" title="Ajustar" style="font-size:0.75rem;width:auto;padding:0 0.5rem;">Ajustar</button>
     </div>
   </div>
 
-  <div class="graph-container" role="main" aria-label="Concept graph visualization">
-    <canvas id="graph-canvas" tabindex="0" aria-label="Interactive concept graph. Click nodes to view details."></canvas>
+  <div class="graph-container" role="main" aria-label="Visualização do grafo de conceitos">
+    <canvas id="graph-canvas" tabindex="0" aria-label="Grafo interativo de conceitos. Clique nos nós para ver detalhes."></canvas>
     <div class="tooltip" id="tooltip" role="tooltip"></div>
-    <div class="loading-overlay" id="loading" aria-live="polite">Loading graph…</div>
+    <div class="loading-overlay" id="loading" aria-live="polite">Carregando grafo…</div>
   </div>
 
   <script>
@@ -519,7 +519,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
       allChip.setAttribute('data-domain', 'all');
       allChip.setAttribute('role', 'checkbox');
       allChip.setAttribute('aria-checked', activeDomains.size === 0 ? 'true' : 'false');
-      allChip.textContent = 'All';
+      allChip.textContent = 'Todos';
       allChip.addEventListener('click', function() {
         activeDomains.clear();
         buildDomainChips();
@@ -738,7 +738,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
             var graphContainer = canvas.parentElement;
             var empty = document.createElement('div');
             empty.className = 'empty-overlay';
-            empty.innerHTML = '<p>No concepts yet</p><p class="sub">Add books and process them to populate the concept graph.</p>';
+            empty.innerHTML = '<p>Nenhum conceito ainda</p><p class="sub">Adicione livros e processe-os para popular o grafo de conceitos.</p>';
             graphContainer.appendChild(empty);
             return;
           }
@@ -767,7 +767,7 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
           var graphContainer = canvas.parentElement;
           var errDiv = document.createElement('div');
           errDiv.className = 'error-overlay';
-          errDiv.innerHTML = '<div class="error-box">Failed to load graph: ' + escapeHtml(err.message) + '</div>';
+          errDiv.innerHTML = '<div class="error-box">Erro ao carregar grafo: ' + escapeHtml(err.message) + '</div>';
           graphContainer.appendChild(errDiv);
         });
     }
@@ -780,11 +780,11 @@ const GRAPH_HTML: &str = r#"<!DOCTYPE html>
 </html>"#;
 
 const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Concept</title>
+  <title>Knowledge Vault — Conceito</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -1002,18 +1002,18 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
   <header>
     <h1>Knowledge Vault</h1>
     <nav class="header-nav" aria-label="Site navigation">
-      <a href="/" class="nav-link">Library</a>
-      <a href="/graph" class="nav-link">Graph</a>
+      <a href="/" class="nav-link">Biblioteca</a>
+      <a href="/graph" class="nav-link">Grafo</a>
     </nav>
   </header>
   <main>
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-      <a href="/graph">Graph</a>
+    <nav class="breadcrumb" aria-label="Navegação estrutural">
+      <a href="/graph">Grafo</a>
       <span aria-hidden="true">›</span>
-      <span id="breadcrumb-name">Concept</span>
+      <span id="breadcrumb-name">Conceito</span>
     </nav>
     <div id="content">
-      <div class="loading-state" aria-live="polite">Loading…</div>
+      <div class="loading-state" aria-live="polite">Carregando…</div>
     </div>
   </main>
 
@@ -1039,14 +1039,14 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
 
       var booksHtml = '';
       if (!data.books || data.books.length === 0) {
-        booksHtml = '<p class="empty-section">No books linked yet.</p>';
+        booksHtml = '<p class="empty-section">Nenhum livro vinculado ainda.</p>';
       } else {
         booksHtml = '<ul class="book-list" role="list">';
         data.books.forEach(function(b) {
           booksHtml +=
             '<li class="book-item">' +
               '<a href="/works/' + escapeHtml(b.work_id) + '" class="book-link">' + escapeHtml(b.title) + '</a>' +
-              (b.author ? '<span class="book-author">by ' + escapeHtml(b.author) + '</span>' : '') +
+              (b.author ? '<span class="book-author">por ' + escapeHtml(b.author) + '</span>' : '') +
             '</li>';
         });
         booksHtml += '</ul>';
@@ -1054,7 +1054,7 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
 
       var relatedHtml = '';
       if (!data.related_concepts || data.related_concepts.length === 0) {
-        relatedHtml = '<p class="empty-section">No related concepts found.</p>';
+        relatedHtml = '<p class="empty-section">Nenhum conceito relacionado encontrado.</p>';
       } else {
         relatedHtml = '<div class="related-grid">';
         data.related_concepts.forEach(function(r) {
@@ -1081,12 +1081,12 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
           (c.domain ? '<span class="concept-domain">' + escapeHtml(c.domain) + '</span>' : '') +
           (c.description ? '<p class="concept-description">' + escapeHtml(c.description) + '</p>' : '') +
         '</div>' +
-        '<section class="section" aria-label="Books mentioning this concept">' +
-          '<h3 class="section-title">Books (' + (data.books ? data.books.length : 0) + ')</h3>' +
+        '<section class="section" aria-label="Livros que mencionam este conceito">' +
+          '<h3 class="section-title">Livros (' + (data.books ? data.books.length : 0) + ')</h3>' +
           booksHtml +
         '</section>' +
-        '<section class="section" aria-label="Related concepts">' +
-          '<h3 class="section-title">Related Concepts (' + (data.related_concepts ? data.related_concepts.length : 0) + ')</h3>' +
+        '<section class="section" aria-label="Conceitos relacionados">' +
+          '<h3 class="section-title">Conceitos Relacionados (' + (data.related_concepts ? data.related_concepts.length : 0) + ')</h3>' +
           relatedHtml +
         '</section>';
     }
@@ -1095,7 +1095,7 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
       var id = getConceptId();
       fetch('/api/concepts/' + encodeURIComponent(id), { credentials: 'same-origin' })
         .then(function(res) {
-          if (res.status === 404) throw new Error('Concept not found');
+          if (res.status === 404) throw new Error('Conceito não encontrado');
           if (!res.ok) throw new Error('HTTP ' + res.status);
           return res.json();
         })
@@ -1104,7 +1104,7 @@ const CONCEPT_DETAIL_HTML: &str = r#"<!DOCTYPE html>
         })
         .catch(function(err) {
           content.innerHTML =
-            '<div class="error-state" role="alert">Failed to load concept: ' + escapeHtml(err.message) + '</div>';
+            '<div class="error-state" role="alert">Erro ao carregar conceito: ' + escapeHtml(err.message) + '</div>';
         });
     }
 
