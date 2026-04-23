@@ -1,0 +1,12 @@
+[Unit]
+Description=NATS Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nats-server -js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
