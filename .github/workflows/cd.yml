@@ -71,8 +71,16 @@ jobs:
 
       - name: Provision VM (NATS)
         run: |
+          REMOTE_HOST="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          # Upload the unit file so the remote script doesn't need an
+          # embedded heredoc (nested heredocs in YAML block scalars are
+          # invalid — the zero-indented content terminates the YAML block).
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            infra/nats.service "${REMOTE_HOST}:/tmp/nats.service"
+
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- "${NATS_VERSION}" << 'ENDSSH'
+            "${REMOTE_HOST}" bash -s -- "${NATS_VERSION}" << 'ENDSSH'
             set -euo pipefail
             NATS_VERSION="$1"
 
@@ -85,25 +93,11 @@ jobs:
             curl -sL "https://github.com/nats-io/nats-server/releases/download/${NATS_VERSION}/nats-server-${NATS_VERSION}-linux-arm64.tar.gz" \
               | tar xz -C /tmp "nats-server-${NATS_VERSION}-linux-arm64/nats-server"
 
-            # 'sudo install' cria o arquivo diretamente no destino, herdando
-            # o contexto SELinux bin_t — evita ter que rodar restorecon.
             sudo install -m 755 "/tmp/nats-server-${NATS_VERSION}-linux-arm64/nats-server" /usr/local/bin/nats-server
             rm -rf "/tmp/nats-server-${NATS_VERSION}-linux-arm64"
 
-            sudo tee /etc/systemd/system/nats.service > /dev/null << 'EOF'
-[Unit]
-Description=NATS Server
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/nats-server -js
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
+            sudo install -m 644 /tmp/nats.service /etc/systemd/system/nats.service
+            sudo rm -f /tmp/nats.service
 
             sudo systemctl daemon-reload
             sudo systemctl enable --now nats
