@@ -46,6 +46,9 @@ impl OpenLibraryPort for MockOpenLibraryClient {
     }
 
     async fn fetch_by_work_id(&self, _work_id: &str) -> Result<BookMetadata, ExternalError> {
+        // Returns canned data — work_id is not validated by this mock.
+        // The integration tests only assert on HTTP status codes and work
+        // fields set before the OpenLib call, so the content here is irrelevant.
         Ok(BookMetadata {
             title: "Mock Title".to_string(),
             author: "Mock Author".to_string(),
