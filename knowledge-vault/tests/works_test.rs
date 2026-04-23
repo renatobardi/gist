@@ -44,6 +44,15 @@ impl OpenLibraryPort for MockOpenLibraryClient {
             "not used in title tests".to_string(),
         ))
     }
+
+    async fn fetch_by_work_id(&self, _work_id: &str) -> Result<BookMetadata, ExternalError> {
+        Ok(BookMetadata {
+            title: "Mock Title".to_string(),
+            author: "Mock Author".to_string(),
+            description: "Mock description.".to_string(),
+            subjects: vec!["Testing".to_string()],
+        })
+    }
 }
 
 struct ErrorOpenLibraryClient;
@@ -57,6 +66,12 @@ impl OpenLibraryPort for ErrorOpenLibraryClient {
     async fn fetch_by_isbn(&self, _isbn: &str) -> Result<BookMetadata, ExternalError> {
         Err(ExternalError::Permanent(
             "not used in title tests".to_string(),
+        ))
+    }
+
+    async fn fetch_by_work_id(&self, _work_id: &str) -> Result<BookMetadata, ExternalError> {
+        Err(ExternalError::Permanent(
+            "not used in error tests".to_string(),
         ))
     }
 }
