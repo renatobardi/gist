@@ -186,12 +186,7 @@ mod tests {
         async fn find_by_open_library_id(&self, _: &str) -> Result<Option<Work>, RepoError> {
             unimplemented!()
         }
-        async fn create_work_by_title(
-            &self,
-            _: &str,
-            _: &str,
-            _: &str,
-        ) -> Result<Work, RepoError> {
+        async fn create_work_by_title(&self, _: &str, _: &str, _: &str) -> Result<Work, RepoError> {
             unimplemented!()
         }
         async fn list_works(&self, _: u32, _: u32) -> Result<Vec<Work>, RepoError> {
@@ -208,12 +203,7 @@ mod tests {
         ) -> Result<(), RepoError> {
             Ok(())
         }
-        async fn update_status(
-            &self,
-            _: &str,
-            _: &str,
-            _: Option<&str>,
-        ) -> Result<(), RepoError> {
+        async fn update_status(&self, _: &str, _: &str, _: Option<&str>) -> Result<(), RepoError> {
             Ok(())
         }
         async fn reset_to_pending(&self, _: &str) -> Result<Work, RepoError> {
@@ -238,7 +228,10 @@ mod tests {
 
     #[async_trait]
     impl GeminiPort for StubGemini {
-        async fn extract_concepts(&self, _: &BookMetadata) -> Result<GeminiResponse, ExternalError> {
+        async fn extract_concepts(
+            &self,
+            _: &BookMetadata,
+        ) -> Result<GeminiResponse, ExternalError> {
             Ok(GeminiResponse {
                 summary: "stub".into(),
                 key_points: vec![],
