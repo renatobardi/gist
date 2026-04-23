@@ -34,6 +34,7 @@ impl std::fmt::Display for ExternalError {
 pub trait OpenLibraryPort: Send + Sync {
     async fn search_by_title(&self, title: &str) -> Result<Option<OpenLibraryBook>, String>;
     async fn fetch_by_isbn(&self, isbn: &str) -> Result<BookMetadata, ExternalError>;
+    async fn fetch_by_work_id(&self, work_id: &str) -> Result<BookMetadata, ExternalError>;
 }
 
 use crate::domain::insight::GeminiResponse;

@@ -18,6 +18,24 @@ struct SearchResponse {
     docs: Vec<SearchDoc>,
 }
 
+// ---- fetch_by_work_id response shapes ----
+// Works API: authors are nested as { author: { key } } instead of flat { key }
+
+#[derive(Debug, Deserialize)]
+struct OlWorkAuthorEntry {
+    author: OlAuthorRef,
+}
+
+#[derive(Debug, Deserialize)]
+struct OlWorkResponse {
+    title: Option<String>,
+    #[serde(default)]
+    authors: Vec<OlWorkAuthorEntry>,
+    description: Option<OlDescription>,
+    #[serde(default)]
+    subjects: Vec<String>,
+}
+
 // ---- fetch_by_isbn response shapes ----
 
 #[derive(Debug, Deserialize)]
@@ -68,6 +86,19 @@ impl OpenLibraryClient {
             .build()?;
         Ok(Self { client })
     }
+
+    async fn fetch_author_name(&self, key: &str) -> String {
+        let url = format!("https://openlibrary.org{key}.json");
+        match self.client.get(&url).send().await {
+            Ok(r) if r.status().is_success() => r
+                .json::<OlAuthorResponse>()
+                .await
+                .ok()
+                .and_then(|a| a.name)
+                .unwrap_or_else(|| "Unknown author".to_string()),
+            _ => "Unknown author".to_string(),
+        }
+    }
 }
 
 #[async_trait]
@@ -115,6 +146,55 @@ impl OpenLibraryPort for OpenLibraryClient {
         }))
     }
 
+    async fn fetch_by_work_id(&self, work_id: &str) -> Result<BookMetadata, ExternalError> {
+        let url = format!("https://openlibrary.org{work_id}.json");
+
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| ExternalError::Transient(e.to_string()))?;
+
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Err(ExternalError::Permanent(format!(
+                "work {work_id} not found in Open Library"
+            )));
+        }
+
+        if !resp.status().is_success() {
+            return Err(ExternalError::Transient(format!(
+                "Open Library returned HTTP {}",
+                resp.status()
+            )));
+        }
+
+        let work: OlWorkResponse = resp
+            .json()
+            .await
+            .map_err(|e| ExternalError::Transient(e.to_string()))?;
+
+        let title = work.title.unwrap_or_else(|| "Unknown title".to_string());
+        let description = work
+            .description
+            .as_ref()
+            .map(|d| d.text().to_string())
+            .unwrap_or_default();
+        let subjects = work.subjects;
+
+        let author = match work.authors.first().and_then(|e| e.author.key.as_deref()) {
+            Some(key) => self.fetch_author_name(key).await,
+            None => "Unknown author".to_string(),
+        };
+
+        Ok(BookMetadata {
+            title,
+            author,
+            description,
+            subjects,
+        })
+    }
+
     async fn fetch_by_isbn(&self, isbn: &str) -> Result<BookMetadata, ExternalError> {
         let url = format!("https://openlibrary.org/isbn/{isbn}.json");
 
@@ -151,23 +231,9 @@ impl OpenLibraryPort for OpenLibraryClient {
             .unwrap_or_default();
         let subjects = book.subjects;
 
-        let author = if let Some(author_ref) = book.authors.first() {
-            if let Some(key) = &author_ref.key {
-                let author_url = format!("https://openlibrary.org{key}.json");
-                match self.client.get(&author_url).send().await {
-                    Ok(r) if r.status().is_success() => r
-                        .json::<OlAuthorResponse>()
-                        .await
-                        .ok()
-                        .and_then(|a| a.name)
-                        .unwrap_or_else(|| "Unknown author".to_string()),
-                    _ => "Unknown author".to_string(),
-                }
-            } else {
-                "Unknown author".to_string()
-            }
-        } else {
-            "Unknown author".to_string()
+        let author = match book.authors.first().and_then(|r| r.key.as_deref()) {
+            Some(key) => self.fetch_author_name(key).await,
+            None => "Unknown author".to_string(),
         };
 
         Ok(BookMetadata {

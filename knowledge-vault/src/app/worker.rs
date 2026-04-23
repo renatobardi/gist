@@ -47,7 +47,6 @@ pub fn classify_error(msg: &str) -> WorkerError {
 struct DiscoveryMessage {
     work_id: String,
     identifier: String,
-    #[allow(dead_code)]
     identifier_type: String,
 }
 
@@ -88,13 +87,49 @@ impl WorkerService {
         let dm: DiscoveryMessage = serde_json::from_str(text)
             .map_err(|e| WorkerError::Permanent(format!("invalid message JSON: {e}")))?;
 
-        tracing::info!(work_id = %dm.work_id, isbn = %dm.identifier, "processing discovery message");
+        tracing::info!(
+            work_id = %dm.work_id,
+            identifier = %dm.identifier,
+            identifier_type = %dm.identifier_type,
+            "processing discovery message"
+        );
 
         self.work_repo
             .update_status(&dm.work_id, "processing", None)
             .await?;
 
-        let metadata = self.openlib.fetch_by_isbn(&dm.identifier).await?;
+        let result = self.run_pipeline(&dm).await;
+
+        // Persist the failure so the UI reflects the terminal state.
+        // Only permanent failures are updated here; transient failures
+        // stay as "processing" while the consumer retries.
+        if let Err(WorkerError::Permanent(ref e)) = result {
+            let _ = self
+                .work_repo
+                .update_status(&dm.work_id, "failed", Some(e.as_str()))
+                .await;
+        }
+
+        result
+    }
+
+    async fn run_pipeline(&self, dm: &DiscoveryMessage) -> Result<(), WorkerError> {
+        let metadata = if dm.identifier_type == "title" {
+            let book = self
+                .openlib
+                .search_by_title(&dm.identifier)
+                .await
+                .map_err(WorkerError::Transient)?
+                .ok_or_else(|| {
+                    WorkerError::Permanent(format!(
+                        "title '{}' not found in Open Library",
+                        dm.identifier
+                    ))
+                })?;
+            self.openlib.fetch_by_work_id(&book.open_library_id).await?
+        } else {
+            self.openlib.fetch_by_isbn(&dm.identifier).await?
+        };
 
         let gemini_resp = self.gemini.extract_concepts(&metadata).await?;
 
