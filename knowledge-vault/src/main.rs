@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
                     Ok(js_consumer) => {
                         let consumer = NatsConsumer::new(js_consumer);
                         let model = std::env::var("KV_GEMINI_MODEL")
-                            .unwrap_or_else(|_| "gemini-2.0-flash".to_string());
+                            .unwrap_or_else(|_| "gemini-2.5-flash".to_string());
                         let openlib = Arc::new(
                             OpenLibraryClient::build()
                                 .expect("failed to build OpenLibraryClient for worker"),
