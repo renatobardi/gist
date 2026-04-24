@@ -103,7 +103,7 @@ async fn get_add_book_contains_form_elements() {
     let body = res.text();
     assert!(body.contains(r#"id="identifier""#));
     assert!(body.contains(r#"id="add-form""#));
-    assert!(body.contains("ISBN or Title"));
+    assert!(body.contains("ISBN ou T\u{00ED}tulo"));
     assert!(body.contains("/api/works"));
 }
 
@@ -118,8 +118,8 @@ async fn get_add_book_contains_isbn_validation_logic() {
     let body = res.text();
     assert!(body.contains("validateIsbn13"));
     assert!(body.contains("validateIsbn10"));
-    assert!(body.contains("check digit mismatch"));
-    assert!(body.contains("Invalid ISBN-13"));
+    assert!(body.contains("d\u{00ED}gito verificador incorreto"));
+    assert!(body.contains("ISBN-13 inv\u{00E1}lido"));
 }
 
 #[tokio::test]
