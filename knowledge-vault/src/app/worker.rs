@@ -21,6 +21,7 @@ impl From<ExternalError> for WorkerError {
         match e {
             ExternalError::Transient(msg) => WorkerError::Transient(msg),
             ExternalError::Permanent(msg) => WorkerError::Permanent(msg),
+            ExternalError::SkippedOptional(msg) => WorkerError::Permanent(msg),
         }
     }
 }

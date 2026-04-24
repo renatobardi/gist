@@ -19,6 +19,7 @@ pub struct BookMetadata {
 pub enum ExternalError {
     Transient(String),
     Permanent(String),
+    SkippedOptional(String),
 }
 
 impl std::fmt::Display for ExternalError {
@@ -26,6 +27,7 @@ impl std::fmt::Display for ExternalError {
         match self {
             ExternalError::Transient(msg) => write!(f, "transient error: {msg}"),
             ExternalError::Permanent(msg) => write!(f, "permanent error: {msg}"),
+            ExternalError::SkippedOptional(msg) => write!(f, "skipped optional: {msg}"),
         }
     }
 }
