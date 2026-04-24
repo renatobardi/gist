@@ -19,11 +19,11 @@ pub async fn get_failed_works(
 }
 
 const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Failed Works</title>
+  <title>Knowledge Vault — Processos com Falha</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -244,17 +244,17 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
   <header>
     <h1>Knowledge Vault</h1>
     <nav class="header-nav" aria-label="Site navigation">
-      <a href="/" class="nav-link">&#8592; Library</a>
-      <a href="/add" class="nav-link">+ Add Book</a>
+      <a href="/" class="nav-link">&#8592; Biblioteca</a>
+      <a href="/add" class="nav-link">+ Adicionar Livro</a>
     </nav>
   </header>
   <main>
     <div class="page-header">
-      <h2 class="page-title">Failed Works</h2>
+      <h2 class="page-title">Processos com Falha</h2>
       <span id="failure-count" class="failure-count" aria-live="polite" aria-label="Number of failed works" style="display:none;"></span>
     </div>
     <div id="content" aria-live="polite">
-      <div class="loading-state" aria-label="Loading failed works">Loading…</div>
+      <div class="loading-state" aria-label="Carregando processos com falha">Carregando…</div>
     </div>
   </main>
 
@@ -286,9 +286,9 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
         updateCountBadge(0);
         content.innerHTML =
           '<div class="empty-state">' +
-            '<p>No failed works</p>' +
-            '<p class="sub">All books have been processed successfully.</p>' +
-            '<a href="/" class="back-link">Go to Library</a>' +
+            '<p>Nenhuma falha</p>' +
+            '<p class="sub">Todos os livros foram processados com sucesso.</p>' +
+            '<a href="/" class="back-link">Ir para a Biblioteca</a>' +
           '</div>';
         return;
       }
@@ -297,29 +297,29 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
 
       var html = '<ul class="failed-list" role="list" aria-label="Failed books">';
       works.forEach(function(w) {
-        var title = escapeHtml(w.title) || '(untitled)';
+        var title = escapeHtml(w.title) || '(sem título)';
         var author = escapeHtml(w.author) || '';
         var isbn = w.isbn ? escapeHtml(w.isbn) : '';
         var errMsg = w.error_msg
           ? escapeHtml(w.error_msg)
-          : 'An error occurred during processing. No additional details are available.';
+          : 'Ocorreu um erro durante o processamento. Nenhum detalhe adicional disponível.';
 
         html +=
           '<li class="failed-card" data-id="' + escapeHtml(w.id) + '" role="listitem">' +
             '<div class="card-header">' +
               '<div class="card-meta">' +
                 '<p class="book-title">' + title + '</p>' +
-                (author ? '<p class="book-author">by ' + author + '</p>' : '') +
+                (author ? '<p class="book-author">por ' + author + '</p>' : '') +
                 (isbn ? '<p class="book-isbn">ISBN: ' + isbn + '</p>' : '') +
               '</div>' +
-              '<span class="badge-failed" aria-label="Status: failed">Failed</span>' +
+              '<span class="badge-failed" aria-label="Status: falha">Falha</span>' +
             '</div>' +
-            '<div class="error-box" role="alert" aria-label="Error details">' +
-              '<span class="error-label">Error:</span>' + errMsg +
+            '<div class="error-box" role="alert" aria-label="Detalhes do erro">' +
+              '<span class="error-label">Erro:</span>' + errMsg +
             '</div>' +
             '<div class="card-actions">' +
-              '<a href="/works/' + escapeHtml(w.id) + '" class="detail-link" aria-label="View details for ' + title + '">View details</a>' +
-              '<button class="retry-btn" data-id="' + escapeHtml(w.id) + '" aria-label="Retry processing for ' + title + '">Retry</button>' +
+              '<a href="/works/' + escapeHtml(w.id) + '" class="detail-link" aria-label="Ver detalhes de ' + title + '">Ver detalhes</a>' +
+              '<button class="retry-btn" data-id="' + escapeHtml(w.id) + '" aria-label="Tentar novamente para ' + title + '">Tentar novamente</button>' +
             '</div>' +
           '</li>';
       });
@@ -343,7 +343,7 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
 
     function retryWork(id, btn) {
       btn.disabled = true;
-      btn.textContent = 'Retrying…';
+      btn.textContent = 'Tentando…';
       fetch('/api/works/' + encodeURIComponent(id) + '/retry', {
         method: 'POST',
         credentials: 'same-origin',
@@ -357,7 +357,7 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
               btn.remove();
               var ok = document.createElement('span');
               ok.className = 'retry-success';
-              ok.textContent = '✓ Queued for retry';
+              ok.textContent = '✓ Na fila para nova tentativa';
               actions.appendChild(ok);
             }
           }
@@ -365,12 +365,12 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
           updateCountBadge(failedWorks.length);
         } else {
           btn.disabled = false;
-          btn.textContent = 'Retry';
+          btn.textContent = 'Tentar novamente';
         }
       })
       .catch(function() {
         btn.disabled = false;
-        btn.textContent = 'Retry';
+        btn.textContent = 'Tentar novamente';
       });
     }
 
@@ -413,8 +413,8 @@ const FAILED_WORKS_HTML: &str = r#"<!DOCTYPE html>
       fetchAllWorks(function(err, works) {
         if (err) {
           content.innerHTML =
-            '<div class="error-state" role="alert">Failed to load works: ' + escapeHtml(err.message) +
-            '. <button onclick="loadFailedWorks()" style="margin-left:0.5rem;background:none;border:none;color:#721c24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;">Retry</button></div>';
+            '<div class="error-state" role="alert">Erro ao carregar processos: ' + escapeHtml(err.message) +
+            '. <button onclick="loadFailedWorks()" style="margin-left:0.5rem;background:none;border:none;color:#721c24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;">Tentar novamente</button></div>';
           return;
         }
         failedWorks = (works || []).filter(function(w) { return w.status === 'failed'; });

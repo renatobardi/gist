@@ -19,11 +19,11 @@ pub async fn get_library(
 }
 
 const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Library</title>
+  <title>Knowledge Vault — Biblioteca</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -181,24 +181,28 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
   <header>
     <h1>Knowledge Vault</h1>
     <div style="display:flex;align-items:center;gap:1.25rem;">
-      <a href="/failed" id="failed-nav-link" style="color:#8c8c8c;text-decoration:none;font-size:0.875rem;display:none;" aria-label="View failed works">Failed</a>
-      <a href="/add" class="add-btn" aria-label="Add a book to your vault">+ Add Book</a>
+      <a href="/failed" id="failed-nav-link" style="color:#8c8c8c;text-decoration:none;font-size:0.875rem;display:none;" aria-label="Ver processos com falha">Falhas</a>
+      <a href="/add" class="add-btn" aria-label="Adicionar um livro ao vault">+ Adicionar Livro</a>
     </div>
   </header>
   <main>
-    <h2 class="page-title">Library</h2>
+    <h2 class="page-title">Biblioteca</h2>
     <div id="content">
-      <div class="loading-state" aria-live="polite" aria-label="Loading books">Loading…</div>
+      <div class="loading-state" aria-live="polite" aria-label="Carregando livros">Carregando…</div>
     </div>
   </main>
 
   <script>
     var content = document.getElementById('content');
 
+    function statusLabel(status) {
+      var labels = { pending:'Pendente', processing:'Processando', done:'Concluído', failed:'Falha' };
+      return labels[status] || status;
+    }
+
     function statusBadgeHtml(status) {
       var cls = 'badge badge-' + status;
-      var label = status.charAt(0).toUpperCase() + status.slice(1);
-      return '<span class="' + cls + '">' + label + '</span>';
+      return '<span class="' + cls + '">' + statusLabel(status) + '</span>';
     }
 
     function escapeHtml(str) {
@@ -215,7 +219,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
       var link = document.getElementById('failed-nav-link');
       if (!link) return;
       if (failedCount > 0) {
-        link.textContent = 'Failed (' + failedCount + ')';
+        link.textContent = 'Falhas (' + failedCount + ')';
         link.style.display = '';
         link.style.color = '#dc3545';
       } else {
@@ -227,19 +231,19 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
       if (!works || works.length === 0) {
         content.innerHTML =
           '<div class="empty-state">' +
-            '<p>No books yet. Add your first book to get started.</p>' +
-            '<a href="/add" class="add-btn">+ Add Book</a>' +
+            '<p>Nenhum livro ainda. Adicione seu primeiro livro para começar.</p>' +
+            '<a href="/add" class="add-btn">+ Adicionar Livro</a>' +
           '</div>';
         return;
       }
 
       var html = '<div class="book-grid" id="book-grid">';
       works.forEach(function(w) {
-        var title = escapeHtml(w.title) || '(untitled)';
+        var title = escapeHtml(w.title) || '(sem título)';
         var author = escapeHtml(w.author) || '';
         var isbn = w.isbn ? escapeHtml(w.isbn) : '';
         var retryBtn = w.status === 'failed'
-          ? '<button class="retry-btn" data-id="' + escapeHtml(w.id) + '" aria-label="Retry processing for ' + title + '">Retry</button>'
+          ? '<button class="retry-btn" data-id="' + escapeHtml(w.id) + '" aria-label="Tentar novamente para ' + title + '">Tentar novamente</button>'
           : '';
         var metaLeft = statusBadgeHtml(w.status);
         var metaRight = retryBtn || (isbn ? '<span class="isbn-label">' + isbn + '</span>' : '');
@@ -269,7 +273,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
 
     function retryWork(id, btn) {
       btn.disabled = true;
-      btn.textContent = 'Retrying…';
+      btn.textContent = 'Tentando…';
       fetch('/api/works/' + id + '/retry', {
         method: 'POST',
         credentials: 'same-origin',
@@ -279,12 +283,12 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
           loadBooks();
         } else {
           btn.disabled = false;
-          btn.textContent = 'Retry';
+          btn.textContent = 'Tentar novamente';
         }
       })
       .catch(function() {
         btn.disabled = false;
-        btn.textContent = 'Retry';
+        btn.textContent = 'Tentar novamente';
       });
     }
 
@@ -295,7 +299,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
       var badgeEl = card.querySelector('.badge');
       if (badgeEl) {
         badgeEl.className = 'badge badge-' + work.status;
-        badgeEl.textContent = work.status.charAt(0).toUpperCase() + work.status.slice(1);
+        badgeEl.textContent = statusLabel(work.status);
       }
 
       var retryEl = card.querySelector('.retry-btn');
@@ -305,7 +309,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
           var btn = document.createElement('button');
           btn.className = 'retry-btn';
           btn.dataset.id = work.id;
-          btn.textContent = 'Retry';
+          btn.textContent = 'Tentar novamente';
           btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -341,7 +345,7 @@ const LIBRARY_HTML: &str = r#"<!DOCTYPE html>
         })
         .catch(function(err) {
           content.innerHTML =
-            '<div class="error-state" role="alert">Failed to load library: ' + escapeHtml(err.message) + '. <a href="/">Retry</a></div>';
+            '<div class="error-state" role="alert">Erro ao carregar biblioteca: ' + escapeHtml(err.message) + '. <a href="/">Tentar novamente</a></div>';
         });
     }
 

@@ -7,11 +7,11 @@ pub async fn get_add_book(_auth: AuthenticatedUser) -> Response {
 }
 
 const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Add Book</title>
+  <title>Knowledge Vault — Adicionar Livro</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -178,11 +178,11 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
 <body>
   <header>
     <h1>Knowledge Vault</h1>
-    <a href="/">&#8592; Library</a>
+    <a href="/">&#8592; Biblioteca</a>
   </header>
   <main>
-    <h2>Add Book</h2>
-    <p class="subtitle">Enter an ISBN-10, ISBN-13, or book title to add it to your vault.</p>
+    <h2>Adicionar Livro</h2>
+    <p class="subtitle">Insira um ISBN-10, ISBN-13 ou título do livro para adicioná-lo ao vault.</p>
 
     <div class="card">
       <div id="alert-success" class="alert alert-success" role="alert" aria-live="polite"></div>
@@ -190,18 +190,18 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
 
       <form id="add-form" novalidate>
         <div class="field">
-          <label for="identifier">ISBN or Title</label>
+          <label for="identifier">ISBN ou Título</label>
           <input
             type="text"
             id="identifier"
             name="identifier"
-            placeholder="e.g. 9780132350884 or Clean Code"
+            placeholder="ex.: 9780132350884 ou Clean Code"
             autocomplete="off"
             aria-required="true"
             aria-describedby="identifier-helper identifier-error"
           >
           <p class="helper" id="identifier-helper">
-            ISBN-10, ISBN-13 (hyphens allowed), or a free-text title.
+            ISBN-10, ISBN-13 (hifens permitidos), ou título livre.
           </p>
           <p class="error-msg" id="identifier-error" role="alert"></p>
         </div>
@@ -209,9 +209,9 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
         <div class="actions">
           <button type="submit" id="submit-btn">
             <span class="spinner" aria-hidden="true"></span>
-            Submit
+            Enviar
           </button>
-          <a href="/" class="cancel-link">Cancel</a>
+          <a href="/" class="cancel-link">Cancelar</a>
         </div>
       </form>
     </div>
@@ -258,22 +258,22 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
       // Validate as ISBN
       if (stripped.length === 13) {
         if (!/^[0-9]{13}$/.test(stripped)) {
-          return { type: 'isbn', error: 'Invalid ISBN-13 — must contain only digits' };
+          return { type: 'isbn', error: 'ISBN-13 inválido — deve conter apenas dígitos' };
         }
         if (!validateIsbn13(stripped)) {
-          return { type: 'isbn', error: 'Invalid ISBN-13 — check digit mismatch' };
+          return { type: 'isbn', error: 'ISBN-13 inválido — dígito verificador incorreto' };
         }
         return { type: 'isbn', error: null };
       }
 
       if (stripped.length === 10) {
         if (!validateIsbn10(stripped)) {
-          return { type: 'isbn', error: 'Invalid ISBN-10 — check digit mismatch' };
+          return { type: 'isbn', error: 'ISBN-10 inválido — dígito verificador incorreto' };
         }
         return { type: 'isbn', error: null };
       }
 
-      return { type: 'isbn', error: 'Invalid ISBN — expected 10 or 13 digits, got ' + stripped.length };
+      return { type: 'isbn', error: 'ISBN inválido — esperado 10 ou 13 dígitos, encontrado ' + stripped.length };
     }
 
     var input = document.getElementById('identifier');
@@ -340,7 +340,7 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
 
       var raw = input.value.trim();
       if (!raw) {
-        showFieldError('Please enter an ISBN or book title.');
+        showFieldError('Por favor, insira um ISBN ou título.');
         input.focus();
         return;
       }
@@ -377,19 +377,19 @@ const ADD_BOOK_HTML: &str = r#"<!DOCTYPE html>
         setLoading(false);
         if (r.ok) {
           input.value = '';
-          showAlert('success', 'Book submitted — processing will begin shortly. Redirecting to library…');
+          showAlert('success', 'Livro enviado — o processamento começará em breve. Redirecionando para a biblioteca…');
           setTimeout(function() { window.location.href = '/'; }, 1500);
         } else if (r.status === 409) {
-          showAlert('error', 'This book is already in your vault.');
+          showAlert('error', 'Este livro já está no seu vault.');
         } else if (r.status === 422 && r.data && r.data.message) {
           showAlert('error', r.data.message);
         } else {
-          showAlert('error', 'Something went wrong. Please try again.');
+          showAlert('error', 'Algo deu errado. Tente novamente.');
         }
       })
       .catch(function() {
         setLoading(false);
-        showAlert('error', 'Network error. Please check your connection and try again.');
+        showAlert('error', 'Erro de rede. Verifique sua conexão e tente novamente.');
       });
     });
   </script>

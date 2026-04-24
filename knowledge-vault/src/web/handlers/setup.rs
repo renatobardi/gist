@@ -109,7 +109,7 @@ async fn handle_setup(state: AppState, email: String, password: String, is_json:
         return error_response(
             StatusCode::CONFLICT,
             "already_configured",
-            "An admin account already exists",
+            "Uma conta de administrador já existe",
             409,
             is_json,
         );
@@ -214,11 +214,11 @@ fn setup_html(error: &str, email: &str) -> String {
 
     format!(
         r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Setup</title>
+  <title>Knowledge Vault — Configuração Inicial</title>
   <style>
     *, *::before, *::after {{ box-sizing: border-box; }}
     body {{
@@ -302,10 +302,10 @@ fn setup_html(error: &str, email: &str) -> String {
 <body>
   <main class="card">
     <h1>Knowledge Vault</h1>
-    <p class="subtitle">Create your admin account to get started.</p>
+    <p class="subtitle">Crie sua conta de administrador para começar.</p>
     {error_html}
     <form method="post" action="/setup">
-      <label for="email">Email address</label>
+      <label for="email">E-mail</label>
       <input
         id="email"
         type="email"
@@ -315,7 +315,7 @@ fn setup_html(error: &str, email: &str) -> String {
         autocomplete="email"
         aria-describedby="email-hint"
       />
-      <label for="password">Password</label>
+      <label for="password">Senha</label>
       <input
         id="password"
         type="password"
@@ -326,9 +326,9 @@ fn setup_html(error: &str, email: &str) -> String {
         aria-describedby="password-hint"
       />
       <p id="password-hint" style="font-size:0.8rem;color:#8c8c8c;margin-top:-1rem;margin-bottom:1.25rem;">
-        Minimum 12 characters.
+        Mínimo 12 caracteres.
       </p>
-      <button type="submit">Create account</button>
+      <button type="submit">Criar conta</button>
     </form>
   </main>
 </body>

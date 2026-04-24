@@ -41,6 +41,208 @@ pub async fn get_login() -> impl IntoResponse {
     Html(LOGIN_HTML)
 }
 
+const LOGIN_HTML: &str = r#"<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Vault — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'BMW Type Next', Arial, sans-serif;
+      background: #262626;
+      color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #3c3c3c;
+      border-radius: 4px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      color: #f0f0f0;
+    }
+    p.subtitle {
+      color: #8c8c8c;
+      margin: 0 0 2rem;
+      font-size: 0.9rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #c8c8c8;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #3c3c3c;
+      border-radius: 2px;
+      background: #262626;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+    }
+    input:focus {
+      outline: 3px solid #0653b6;
+      outline-offset: 2px;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #1c69d4;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    button:hover { background: #0653b6; }
+    button:focus {
+      outline: 3px solid #0653b6;
+      outline-offset: 2px;
+    }
+    button:disabled { background: #4a4a4a; cursor: not-allowed; }
+    .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    button.loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error {
+      background: #3d1515;
+      border: 1px solid #7a2020;
+      border-radius: 2px;
+      padding: 0.6rem 0.75rem;
+      color: #ff8080;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .error.visible { display: block; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Knowledge Vault</h1>
+    <p class="subtitle">Entre na sua conta.</p>
+    <div id="error-msg" class="error" role="alert" aria-live="polite"></div>
+    <form id="login-form" novalidate>
+      <label for="email">E-mail</label>
+      <input
+        id="email"
+        type="email"
+        name="email"
+        required
+        autocomplete="email"
+        autofocus
+      />
+      <label for="password">Senha</label>
+      <input
+        id="password"
+        type="password"
+        name="password"
+        required
+        autocomplete="current-password"
+      />
+      <button type="submit" id="submit-btn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="btn-label">Entrar</span>
+      </button>
+    </form>
+  </main>
+
+  <script>
+    var form = document.getElementById('login-form');
+    var errorMsg = document.getElementById('error-msg');
+    var submitBtn = document.getElementById('submit-btn');
+    var btnLabel = document.getElementById('btn-label');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      if (loading) {
+        submitBtn.classList.add('loading');
+        btnLabel.textContent = 'Entrando…';
+      } else {
+        submitBtn.classList.remove('loading');
+        btnLabel.textContent = 'Entrar';
+      }
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      errorMsg.classList.remove('visible');
+
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('Preencha e-mail e senha.');
+        return;
+      }
+
+      setLoading(true);
+
+      fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(function(res) {
+        return res.json().then(function(data) { return { ok: res.ok, status: res.status, data: data }; });
+      })
+      .then(function(r) {
+        setLoading(false);
+        if (r.ok) {
+          window.location.href = '/';
+        } else if (r.status === 429) {
+          var secs = r.data && r.data.retry_after_seconds ? r.data.retry_after_seconds : 300;
+          var mins = Math.ceil(secs / 60);
+          showError('Muitas tentativas. Tente novamente em ' + mins + ' minuto(s).');
+        } else if (r.status === 401) {
+          showError('E-mail ou senha inválidos.');
+        } else {
+          showError((r.data && r.data.message) || 'Erro inesperado. Tente novamente.');
+        }
+      })
+      .catch(function() {
+        setLoading(false);
+        showError('Erro de rede. Tente novamente.');
+      });
+    });
+  </script>
+</body>
+</html>"#;
+
 pub async fn post_login(State(state): State<AppState>, Json(input): Json<LoginInput>) -> Response {
     let email = input.email.trim().to_lowercase();
 
@@ -87,7 +289,7 @@ pub async fn post_login(State(state): State<AppState>, Json(input): Json<LoginIn
                 StatusCode::UNAUTHORIZED,
                 Json(ErrorResponse {
                     error: "invalid_credentials".into(),
-                    message: "Invalid email or password".into(),
+                    message: "E-mail ou senha inválidos".into(),
                     status: 401,
                 }),
             )
@@ -114,7 +316,7 @@ pub async fn post_login(State(state): State<AppState>, Json(input): Json<LoginIn
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
                     error: "internal_error".into(),
-                    message: "Password hash corrupted".into(),
+                    message: "Erro interno de autenticação".into(),
                     status: 500,
                 }),
             )
@@ -203,145 +405,3 @@ async fn compute_retry_after(state: &AppState, email: &str) -> u64 {
         _ => LOCKOUT_WINDOW_SECONDS,
     }
 }
-
-const LOGIN_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Knowledge Vault — Login</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'BMW Type Next', Inter, Arial, sans-serif;
-      background: #262626;
-      color: #f0f0f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-    }
-    .card {
-      background: #1a1a1a;
-      border: 1px solid #3c3c3c;
-      border-radius: 4px;
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 420px;
-    }
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 0 0 0.5rem;
-    }
-    p.subtitle {
-      color: #8c8c8c;
-      margin: 0 0 2rem;
-      font-size: 0.9rem;
-    }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 0.35rem;
-      color: #c8c8c8;
-    }
-    input {
-      display: block;
-      width: 100%;
-      padding: 0.6rem 0.75rem;
-      border: 1px solid #3c3c3c;
-      border-radius: 2px;
-      background: #262626;
-      color: #f0f0f0;
-      font-size: 0.95rem;
-      margin-bottom: 1.25rem;
-      font-family: inherit;
-    }
-    input:focus { outline: 3px solid #0653b6; outline-offset: 2px; }
-    button {
-      width: 100%;
-      padding: 0.7rem;
-      background: #1c69d4;
-      color: #fff;
-      border: none;
-      border-radius: 2px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    button:hover { background: #0653b6; }
-    button:focus { outline: 3px solid #0653b6; outline-offset: 2px; }
-    button:disabled { background: #3c3c3c; cursor: not-allowed; }
-    .error {
-      background: #3d1515;
-      border: 1px solid #7a2020;
-      border-radius: 2px;
-      padding: 0.6rem 0.75rem;
-      color: #ff8080;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-      display: none;
-    }
-    .error.visible { display: block; }
-  </style>
-</head>
-<body>
-  <main class="card">
-    <h1>Knowledge Vault</h1>
-    <p class="subtitle">Sign in to your account.</p>
-    <div id="error" class="error" role="alert" aria-live="polite"></div>
-    <form id="form">
-      <label for="email">Email address</label>
-      <input id="email" type="email" name="email" required autocomplete="email" />
-      <label for="password">Password</label>
-      <input id="password" type="password" name="password" required autocomplete="current-password" />
-      <button type="submit" id="btn">Sign in</button>
-    </form>
-  </main>
-  <script>
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('btn');
-      const errorEl = document.getElementById('error');
-      btn.disabled = true;
-      btn.textContent = 'Signing in…';
-      errorEl.classList.remove('visible');
-
-      try {
-        const res = await fetch('/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value,
-          }),
-        });
-
-        if (res.ok) {
-          window.location.href = '/';
-          return;
-        }
-
-        const data = await res.json().catch(() => ({}));
-        if (res.status === 429) {
-          const secs = data.retry_after_seconds ?? 300;
-          const mins = Math.ceil(secs / 60);
-          errorEl.textContent = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
-        } else {
-          errorEl.textContent = data.message ?? 'Invalid email or password.';
-        }
-        errorEl.classList.add('visible');
-      } catch {
-        errorEl.textContent = 'Network error. Please try again.';
-        errorEl.classList.add('visible');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Sign in';
-      }
-    });
-  </script>
-</body>
-</html>"#;
