@@ -181,6 +181,7 @@ async fn main() -> anyhow::Result<()> {
                             graph_write_repo.clone(),
                             openlib,
                             gemini,
+                            google_books_client.clone(),
                             ws_broadcaster.clone(),
                         ));
 

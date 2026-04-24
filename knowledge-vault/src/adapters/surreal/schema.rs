@@ -33,7 +33,7 @@ DEFINE FIELD IF NOT EXISTS created_at     ON work TYPE datetime DEFAULT time::no
 DEFINE FIELD IF NOT EXISTS updated_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS reading_status  ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS progress_pct    ON work TYPE option<float>;
-DEFINE FIELD IF NOT EXISTS last_action     ON work TYPE option<datetime>;
+DEFINE FIELD last_action ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS cover_image_url ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS page_count      ON work TYPE option<int>;
 DEFINE FIELD IF NOT EXISTS publisher       ON work TYPE option<string>;

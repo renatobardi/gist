@@ -94,6 +94,15 @@ pub trait WorkRepo: Send + Sync {
         progress_pct: i32,
         last_action: &str,
     ) -> Result<(), RepoError>;
+    async fn update_google_books_metadata(
+        &self,
+        id: &str,
+        cover_image_url: Option<&str>,
+        page_count: Option<i32>,
+        publisher: Option<&str>,
+        average_rating: Option<f64>,
+        preview_link: Option<&str>,
+    ) -> Result<(), RepoError>;
     async fn update_reading_status(
         &self,
         id: &str,
