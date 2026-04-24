@@ -12,7 +12,7 @@ fn thing_id_to_string(id: surrealdb::sql::Id) -> String {
 
 use crate::{
     domain::work::Work,
-    ports::repository::{RepoError, WorkRepo},
+    ports::repository::{RepoError, SortOrder, WorkRepo, WorkSortField},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,11 +26,36 @@ struct WorkRecord {
     error_msg: Option<String>,
     created_at: String,
     updated_at: String,
+    #[serde(default)]
+    progress_pct: Option<serde_json::Value>,
+    #[serde(default)]
+    last_action: Option<serde_json::Value>,
+    #[serde(default)]
+    reading_status: Option<String>,
+    #[serde(default)]
+    cover_image_url: Option<String>,
+    #[serde(default)]
+    page_count: Option<i32>,
+    #[serde(default)]
+    publisher: Option<String>,
+    #[serde(default)]
+    average_rating: Option<f64>,
+    #[serde(default)]
+    preview_link: Option<String>,
 }
 
 fn record_to_work(rec: WorkRecord, id_override: Option<String>) -> Work {
     let id =
         id_override.unwrap_or_else(|| rec.id.map(|t| thing_id_to_string(t.id)).unwrap_or_default());
+    let progress_pct = rec
+        .progress_pct
+        .and_then(|v| v.as_f64())
+        .map(|f| f as i32)
+        .unwrap_or(0);
+    let last_action = rec
+        .last_action
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .unwrap_or_default();
     Work {
         id,
         title: rec.title,
@@ -41,6 +66,14 @@ fn record_to_work(rec: WorkRecord, id_override: Option<String>) -> Work {
         error_msg: rec.error_msg,
         created_at: rec.created_at,
         updated_at: rec.updated_at,
+        progress_pct,
+        last_action,
+        reading_status: rec.reading_status,
+        cover_image_url: rec.cover_image_url,
+        page_count: rec.page_count,
+        publisher: rec.publisher,
+        average_rating: rec.average_rating,
+        preview_link: rec.preview_link,
     }
 }
 
@@ -239,5 +272,38 @@ impl WorkRepo for SurrealWorkRepo {
             .next()
             .map(|rec| record_to_work(rec, Some(id.to_string())))
             .ok_or(RepoError::NotFound)
+    }
+
+    async fn delete_work_cascade(&self, _id: &str) -> Result<(), RepoError> {
+        todo!("implement delete_work_cascade")
+    }
+
+    async fn update_progress(
+        &self,
+        _id: &str,
+        _progress_pct: i32,
+        _last_action: &str,
+    ) -> Result<(), RepoError> {
+        todo!("implement update_progress")
+    }
+
+    async fn update_reading_status(
+        &self,
+        _id: &str,
+        _reading_status: Option<&str>,
+    ) -> Result<Work, RepoError> {
+        todo!("implement update_reading_status")
+    }
+
+    async fn list_works_filtered(
+        &self,
+        _status: Option<&str>,
+        _domain: Option<&str>,
+        _sort: WorkSortField,
+        _order: SortOrder,
+        _limit: u32,
+        _offset: u32,
+    ) -> Result<Vec<Work>, RepoError> {
+        todo!("implement list_works_filtered")
     }
 }

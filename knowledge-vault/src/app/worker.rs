@@ -163,7 +163,7 @@ mod tests {
     use crate::ports::{
         external::{BookMetadata, ExternalError, GeminiPort, OpenLibraryBook, OpenLibraryPort},
         messaging::{backoff_delay, should_retry, WorkerError, MAX_ATTEMPTS},
-        repository::{GraphWriteRepo, RepoError, WorkRepo},
+        repository::{GraphWriteRepo, RepoError, SortOrder, WorkRepo, WorkSortField},
     };
     use std::sync::Mutex;
     use std::time::Duration;
@@ -207,6 +207,26 @@ mod tests {
             Ok(())
         }
         async fn reset_to_pending(&self, _: &str) -> Result<Work, RepoError> {
+            unimplemented!()
+        }
+        async fn delete_work_cascade(&self, _: &str) -> Result<(), RepoError> {
+            unimplemented!()
+        }
+        async fn update_progress(&self, _: &str, _: i32, _: &str) -> Result<(), RepoError> {
+            Ok(())
+        }
+        async fn update_reading_status(&self, _: &str, _: Option<&str>) -> Result<Work, RepoError> {
+            unimplemented!()
+        }
+        async fn list_works_filtered(
+            &self,
+            _: Option<&str>,
+            _: Option<&str>,
+            _: WorkSortField,
+            _: SortOrder,
+            _: u32,
+            _: u32,
+        ) -> Result<Vec<Work>, RepoError> {
             unimplemented!()
         }
     }

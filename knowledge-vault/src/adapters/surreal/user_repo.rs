@@ -4,9 +4,14 @@ use surrealdb::{engine::local::Db, Surreal};
 use uuid::Uuid;
 
 use crate::{
-    domain::user::User,
+    domain::user::{User, UserPreferences},
     ports::repository::{RepoError, UserRepo},
 };
+
+fn thing_id_to_string(id: surrealdb::sql::Id) -> String {
+    let s = id.to_string();
+    s.trim_matches('`').to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct UserRecord {
@@ -14,6 +19,23 @@ struct UserRecord {
     email: String,
     password_hash: String,
     role: String,
+    #[serde(default)]
+    display_name: Option<String>,
+    #[serde(default)]
+    preferences: Option<serde_json::Value>,
+}
+
+fn record_to_user(rec: UserRecord) -> User {
+    let id = rec.id.map(|t| thing_id_to_string(t.id)).unwrap_or_default();
+    let preferences = rec.preferences.and_then(|v| serde_json::from_value(v).ok());
+    User {
+        id,
+        email: rec.email,
+        password_hash: rec.password_hash,
+        role: rec.role,
+        display_name: rec.display_name,
+        preferences,
+    }
 }
 
 pub struct SurrealUserRepo {
@@ -49,18 +71,20 @@ impl UserRepo for SurrealUserRepo {
     }
 
     async fn create(&self, email: String, password_hash: String) -> Result<User, RepoError> {
-        let id = format!("users:{}", Uuid::new_v4());
+        let user_id = Uuid::new_v4().to_string();
 
         let record = UserRecord {
             id: None,
             email: email.clone(),
             password_hash: password_hash.clone(),
             role: "admin".to_string(),
+            display_name: None,
+            preferences: None,
         };
 
         let created: Option<UserRecord> = self
             .db
-            .create(("users", Uuid::new_v4().to_string()))
+            .create(("users", user_id.clone()))
             .content(record)
             .await
             .map_err(|e| {
@@ -72,14 +96,11 @@ impl UserRepo for SurrealUserRepo {
                 }
             })?;
 
-        let rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
-
-        Ok(User {
-            id,
-            email: rec.email,
-            password_hash: rec.password_hash,
-            role: rec.role,
-        })
+        let mut rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
+        rec.id = None;
+        let mut user = record_to_user(rec);
+        user.id = user_id;
+        Ok(user)
     }
 
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
@@ -95,11 +116,19 @@ impl UserRepo for SurrealUserRepo {
             .take(0)
             .map_err(|e| RepoError::Internal(e.to_string()))?;
 
-        Ok(records.into_iter().next().map(|rec| User {
-            id: rec.id.map(|t| t.to_string()).unwrap_or_default(),
-            email: rec.email,
-            password_hash: rec.password_hash,
-            role: rec.role,
-        }))
+        Ok(records.into_iter().next().map(record_to_user))
+    }
+
+    async fn find_by_id(&self, _id: &str) -> Result<Option<User>, RepoError> {
+        todo!("implement find_by_id")
+    }
+
+    async fn update_profile(
+        &self,
+        _id: &str,
+        _display_name: Option<String>,
+        _preferences: Option<UserPreferences>,
+    ) -> Result<User, RepoError> {
+        todo!("implement update_profile")
     }
 }

@@ -1,7 +1,20 @@
 use crate::domain::concept::{ConceptDetail, GraphData};
 use crate::domain::insight::{ExtractedConcept, GeminiResponse, InsightDetail};
-use crate::domain::user::{PersonalAccessToken, User};
+use crate::domain::user::{PersonalAccessToken, User, UserPreferences};
 use crate::domain::work::Work;
+
+#[derive(Debug, Clone, Copy)]
+pub enum WorkSortField {
+    Title,
+    CreatedAt,
+    ProgressPct,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
 
 #[derive(Debug)]
 pub enum RepoError {
@@ -25,6 +38,13 @@ pub trait UserRepo: Send + Sync {
     async fn count(&self) -> Result<u64, RepoError>;
     async fn create(&self, email: String, password_hash: String) -> Result<User, RepoError>;
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepoError>;
+    async fn find_by_id(&self, id: &str) -> Result<Option<User>, RepoError>;
+    async fn update_profile(
+        &self,
+        id: &str,
+        display_name: Option<String>,
+        preferences: Option<UserPreferences>,
+    ) -> Result<User, RepoError>;
 }
 
 #[async_trait::async_trait]
@@ -67,6 +87,27 @@ pub trait WorkRepo: Send + Sync {
         error_msg: Option<&str>,
     ) -> Result<(), RepoError>;
     async fn reset_to_pending(&self, id: &str) -> Result<Work, RepoError>;
+    async fn delete_work_cascade(&self, id: &str) -> Result<(), RepoError>;
+    async fn update_progress(
+        &self,
+        id: &str,
+        progress_pct: i32,
+        last_action: &str,
+    ) -> Result<(), RepoError>;
+    async fn update_reading_status(
+        &self,
+        id: &str,
+        reading_status: Option<&str>,
+    ) -> Result<Work, RepoError>;
+    async fn list_works_filtered(
+        &self,
+        status: Option<&str>,
+        domain: Option<&str>,
+        sort: WorkSortField,
+        order: SortOrder,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<Work>, RepoError>;
 }
 
 #[async_trait::async_trait]
