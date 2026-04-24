@@ -104,8 +104,8 @@ async fn get_library_contains_key_elements() {
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains("Library"), "missing Library heading");
-    assert!(body.contains("Add Book"), "missing Add Book button");
+    assert!(body.contains("Biblioteca"), "missing Biblioteca heading");
+    assert!(body.contains("Adicionar Livro"), "missing Adicionar Livro button");
     assert!(body.contains("/add"), "missing link to /add");
     assert!(
         body.contains("/api/works"),
