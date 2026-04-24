@@ -405,4 +405,3 @@ async fn compute_retry_after(state: &AppState, email: &str) -> u64 {
         _ => LOCKOUT_WINDOW_SECONDS,
     }
 }
-
