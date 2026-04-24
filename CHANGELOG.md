@@ -6,6 +6,28 @@ All notable changes to Knowledge Vault will be documented in this file.
 
 ### Added
 
+#### MVP 2 Schema Migration (Phase 0) (2026-04-24)
+- Extended `work` table with metadata and reading tracking fields:
+  - `progress_pct` (option<float>): Reading progress percentage (0-100)
+  - `last_action` (option<datetime>): Timestamp of last user interaction
+  - `reading_status` (option<string>): Current reading state (e.g., "not_started", "in_progress", "completed")
+  - `cover_image_url` (option<string>): URL to work cover image
+  - `page_count` (option<int>): Total pages in work
+  - `publisher` (option<string>): Publishing company
+  - `average_rating` (option<float>): Community rating (0-5)
+  - `preview_link` (option<string>): Link to preview content
+- Extended `users` table with personalization fields:
+  - `display_name` (option<string>): User's public display name
+  - `preferences` (option<object>): Unstructured user preferences (extensible for future use)
+- All fields are optional and added via safe, idempotent `DEFINE FIELD IF NOT EXISTS` syntax
+- No data migration required; existing records remain unchanged with null values for new fields
+- Added `work_created_at` index on `work.created_at` for query performance
+- PR: [https://github.com/renatobardi/gist/pull/52](https://github.com/renatobardi/gist/pull/52)
+
+### Documentation
+- Updated schema documentation with new `work` and `users` table fields
+- Updated architecture data model section with extended entity definitions
+
 #### Health Check Endpoint (2026-04-21)
 - `GET /health` endpoint for service and database connectivity monitoring
 - HTTP 200 with `{status: "ok", version: "...", db: "connected"}` when database is reachable
