@@ -105,7 +105,10 @@ async fn get_library_contains_key_elements() {
         .await;
     let body = res.text();
     assert!(body.contains("Biblioteca"), "missing Biblioteca heading");
-    assert!(body.contains("Adicionar Livro"), "missing Adicionar Livro button");
+    assert!(
+        body.contains("Adicionar Livro"),
+        "missing Adicionar Livro button"
+    );
     assert!(body.contains("/add"), "missing link to /add");
     assert!(
         body.contains("/api/works"),
