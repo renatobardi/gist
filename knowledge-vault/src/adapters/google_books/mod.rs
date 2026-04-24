@@ -25,8 +25,6 @@ impl GoogleBooksClient {
 
 #[derive(Debug, Deserialize)]
 struct VolumeListResponse {
-    #[serde(rename = "totalItems")]
-    total_items: Option<u64>,
     items: Option<Vec<VolumeItem>>,
 }
 
@@ -68,13 +66,11 @@ impl GoogleBooksPort for GoogleBooksClient {
             }
         };
 
-        let url = format!(
-            "https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}&key={api_key}"
-        );
-
         let resp = self
             .client
-            .get(&url)
+            .get("https://www.googleapis.com/books/v1/volumes")
+            .query(&[("q", format!("isbn:{isbn}"))])
+            .header("x-goog-api-key", api_key.as_str())
             .send()
             .await
             .map_err(|e| {
@@ -101,10 +97,6 @@ impl GoogleBooksPort for GoogleBooksClient {
         let volume_list: VolumeListResponse = resp.json().await.map_err(|e| {
             ExternalError::Transient(format!("failed to parse Google Books response: {e}"))
         })?;
-
-        if volume_list.total_items.unwrap_or(0) == 0 {
-            return Ok(None);
-        }
 
         let volume_info = match volume_list.items.and_then(|items| items.into_iter().next()) {
             Some(item) => item.volume_info,
