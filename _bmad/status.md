@@ -8,7 +8,29 @@
 | UX Design | UX Designer | ✅ Complete | 2026-04-20 |
 | Development | Dev | ⏳ Not started | — |
 
-## Analysis Phase Deliverables
+---
+
+# BMAD Pipeline Status — MVP 2
+
+| Phase | Agent | Status | Date |
+|-------|-------|--------|------|
+| Analysis | Analyst | ✅ Complete | 2026-04-24 |
+| PM | PM | 🔄 Awaiting owner input | — |
+| Architecture | Architect | ⏳ Not started | — |
+| Development | Dev | ⏳ Not started | — |
+
+## MVP 2 — Analysis Phase Deliverables
+- `_bmad/docs/product-brief-mvp2.md` — Product Brief (6 core features + recommendations, constraints, risks, open questions)
+
+## MVP 2 — Open Questions (blocking PM phase)
+1. Goodreads import: does owner have an existing library to migrate?
+2. AI grouping: ephemeral only, or persist as named collections?
+3. Google Books API: does owner have a GCP project?
+4. Reading status field: include in MVP 2?
+
+---
+
+## MVP 1 — Analysis Phase Deliverables
 - `_bmad/docs/product-brief.md` — Product Brief + Initial System Design (SurrealQL schema, Rust Traits, NATS strategy)
 
 ## PM Phase Deliverables
