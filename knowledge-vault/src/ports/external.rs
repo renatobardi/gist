@@ -19,6 +19,7 @@ pub struct BookMetadata {
 pub enum ExternalError {
     Transient(String),
     Permanent(String),
+    SkippedOptional(String),
 }
 
 impl std::fmt::Display for ExternalError {
@@ -26,6 +27,7 @@ impl std::fmt::Display for ExternalError {
         match self {
             ExternalError::Transient(msg) => write!(f, "transient error: {msg}"),
             ExternalError::Permanent(msg) => write!(f, "permanent error: {msg}"),
+            ExternalError::SkippedOptional(msg) => write!(f, "skipped optional: {msg}"),
         }
     }
 }
@@ -50,7 +52,7 @@ pub trait GeminiPort: Send + Sync {
 #[derive(Debug, Clone)]
 pub struct GoogleBooksMetadata {
     pub cover_image_url: Option<String>,
-    pub page_count: Option<i32>,
+    pub page_count: Option<u32>,
     pub publisher: Option<String>,
     pub average_rating: Option<f64>,
     pub preview_link: Option<String>,

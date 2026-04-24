@@ -10,6 +10,7 @@ use async_nats::jetstream::{self, consumer::pull, stream};
 
 use adapters::{
     gemini::GeminiClient,
+    google_books::GoogleBooksClient,
     nats::{consumer::NatsConsumer, publisher::NatsPublisher},
     openlib::OpenLibraryClient,
     surreal::{
@@ -102,6 +103,26 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
+    let google_books_client: Option<Arc<dyn knowledge_vault::ports::external::GoogleBooksPort>> =
+        match std::env::var("KV_GOOGLE_BOOKS_API_KEY").ok() {
+            None => {
+                tracing::warn!(
+                    "KV_GOOGLE_BOOKS_API_KEY not set — Google Books metadata will be skipped"
+                );
+                None
+            }
+            Some(api_key) => match GoogleBooksClient::build(Some(api_key)) {
+                Ok(client) => {
+                    info!("Google Books HTTP client ready");
+                    Some(Arc::new(client))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to build Google Books client: {e}");
+                    None
+                }
+            },
+        };
+
     let ws_broadcaster = WsBroadcaster::new();
 
     // Start NATS worker if Gemini API key is set
@@ -183,7 +204,7 @@ async fn main() -> anyhow::Result<()> {
         graph_read_repo,
         message_publisher,
         open_library_client,
-        google_books_client: None,
+        google_books_client,
         ws_broadcaster,
         jwt_secret,
     };
