@@ -294,7 +294,7 @@ New fields added to `work` table (REN-157 Phase 0):
 
 ```surrealql
 DEFINE FIELD IF NOT EXISTS progress_pct ON work TYPE option<float>;
-DEFINE FIELD IF NOT EXISTS last_action ON work TYPE option<datetime>;
+DEFINE FIELD last_action ON work TYPE option<string>;
 ```
 
 Existing fields also used:
