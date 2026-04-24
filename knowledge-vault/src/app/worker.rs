@@ -8,6 +8,7 @@ use crate::ports::{
     messaging::{MessageHandler, WorkerError},
     repository::{GraphWriteRepo, RepoError, WorkRepo},
 };
+use crate::web::ws_broadcaster::WsBroadcaster;
 
 impl From<RepoError> for WorkerError {
     fn from(e: RepoError) -> Self {
@@ -55,6 +56,7 @@ pub struct WorkerService {
     graph_write_repo: Arc<dyn GraphWriteRepo>,
     openlib: Arc<dyn OpenLibraryPort>,
     gemini: Arc<dyn GeminiPort>,
+    ws_broadcaster: Arc<WsBroadcaster>,
 }
 
 impl WorkerService {
@@ -63,12 +65,14 @@ impl WorkerService {
         graph_write_repo: Arc<dyn GraphWriteRepo>,
         openlib: Arc<dyn OpenLibraryPort>,
         gemini: Arc<dyn GeminiPort>,
+        ws_broadcaster: Arc<WsBroadcaster>,
     ) -> Self {
         Self {
             work_repo,
             graph_write_repo,
             openlib,
             gemini,
+            ws_broadcaster,
         }
     }
 
@@ -312,6 +316,7 @@ mod tests {
             Arc::new(StubGraphWriteRepo),
             openlib,
             Arc::new(StubGemini),
+            WsBroadcaster::new(),
         )
     }
 

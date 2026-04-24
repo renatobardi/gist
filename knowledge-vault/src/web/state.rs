@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use surrealdb::{engine::local::Db, Surreal};
 
-use crate::ports::external::OpenLibraryPort;
+use crate::ports::external::{GoogleBooksPort, OpenLibraryPort};
 use crate::ports::messaging::MessagePublisher;
 use crate::ports::repository::{
     ConceptRepo, GraphReadRepo, GraphWriteRepo, InsightRepo, LoginAttemptRepo, TokenRepo, UserRepo,
@@ -23,6 +23,7 @@ pub struct AppState {
     pub graph_read_repo: Arc<dyn GraphReadRepo>,
     pub message_publisher: Option<Arc<dyn MessagePublisher>>,
     pub open_library_client: Option<Arc<dyn OpenLibraryPort>>,
+    pub google_books_client: Option<Arc<dyn GoogleBooksPort>>,
     pub ws_broadcaster: Arc<WsBroadcaster>,
     pub jwt_secret: String,
 }
