@@ -103,21 +103,24 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
-    let google_books_api_key = std::env::var("KV_GOOGLE_BOOKS_API_KEY").ok();
-    if google_books_api_key.is_none() {
-        tracing::warn!("KV_GOOGLE_BOOKS_API_KEY not set — Google Books metadata will be skipped");
-    }
-    info!("Building HTTP client for Google Books");
     let google_books_client: Option<Arc<dyn knowledge_vault::ports::external::GoogleBooksPort>> =
-        match GoogleBooksClient::build(google_books_api_key) {
-            Ok(client) => {
-                info!("Google Books HTTP client ready");
-                Some(Arc::new(client))
-            }
-            Err(e) => {
-                tracing::warn!("Failed to build Google Books client: {e}");
+        match std::env::var("KV_GOOGLE_BOOKS_API_KEY").ok() {
+            None => {
+                tracing::warn!(
+                    "KV_GOOGLE_BOOKS_API_KEY not set — Google Books metadata will be skipped"
+                );
                 None
             }
+            Some(api_key) => match GoogleBooksClient::build(Some(api_key)) {
+                Ok(client) => {
+                    info!("Google Books HTTP client ready");
+                    Some(Arc::new(client))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to build Google Books client: {e}");
+                    None
+                }
+            },
         };
 
     let ws_broadcaster = WsBroadcaster::new();

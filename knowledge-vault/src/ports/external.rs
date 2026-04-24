@@ -52,7 +52,7 @@ pub trait GeminiPort: Send + Sync {
 #[derive(Debug, Clone)]
 pub struct GoogleBooksMetadata {
     pub cover_image_url: Option<String>,
-    pub page_count: Option<i32>,
+    pub page_count: Option<u32>,
     pub publisher: Option<String>,
     pub average_rating: Option<f64>,
     pub preview_link: Option<String>,

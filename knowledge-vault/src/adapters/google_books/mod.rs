@@ -14,7 +14,7 @@ pub struct GoogleBooksClient {
 impl GoogleBooksClient {
     pub fn build(api_key: Option<String>) -> Result<Self, reqwest::Error> {
         let client = reqwest::Client::builder()
-            .user_agent("knowledge-vault/0.1 (renato.bardi@outlook.com)")
+            .user_agent("knowledge-vault/0.1")
             .timeout(Duration::from_secs(TIMEOUT_SECS))
             .build()?;
         Ok(Self { client, api_key })
@@ -37,7 +37,7 @@ struct VolumeItem {
 #[derive(Debug, Deserialize)]
 struct VolumeInfo {
     #[serde(rename = "pageCount")]
-    page_count: Option<i32>,
+    page_count: Option<u32>,
     publisher: Option<String>,
     #[serde(rename = "averageRating")]
     average_rating: Option<f64>,
