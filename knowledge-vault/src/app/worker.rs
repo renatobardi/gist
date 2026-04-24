@@ -159,7 +159,7 @@ impl WorkerService {
             if dm.identifier_type == "isbn" {
                 match gb_client.fetch_by_isbn(&dm.identifier).await {
                     Ok(Some(meta)) => {
-                        let _ = self
+                        if let Err(e) = self
                             .work_repo
                             .update_google_books_metadata(
                                 &dm.work_id,
@@ -169,7 +169,13 @@ impl WorkerService {
                                 meta.average_rating,
                                 meta.preview_link.as_deref(),
                             )
-                            .await;
+                            .await
+                        {
+                            tracing::warn!(
+                                work_id = %dm.work_id,
+                                "failed to persist Google Books metadata: {e}"
+                            );
+                        }
                     }
                     Ok(None) => {
                         tracing::debug!(
@@ -389,6 +395,22 @@ mod tests {
                 )))),
             })
         }
+
+        fn returns_transient_error() -> Arc<Self> {
+            Arc::new(Self {
+                result: Mutex::new(Some(Err(ExternalError::Transient(
+                    "connection timeout".into(),
+                )))),
+            })
+        }
+
+        fn returns_permanent_error() -> Arc<Self> {
+            Arc::new(Self {
+                result: Mutex::new(Some(Err(ExternalError::Permanent(
+                    "invalid API key".into(),
+                )))),
+            })
+        }
     }
 
     #[async_trait]
@@ -597,6 +619,40 @@ mod tests {
             gb.result.lock().unwrap().is_some(),
             "fetch_by_isbn must not be called for title submissions"
         );
+    }
+
+    #[tokio::test]
+    async fn google_books_transient_error_does_not_fail_pipeline() {
+        let mock = RoutingMock::new();
+        let gb = StubGoogleBooks::returns_transient_error();
+        let (worker, repo) =
+            make_worker_with_google_books(mock, Some(gb as Arc<dyn GoogleBooksPort>));
+
+        let result = worker
+            .process(&payload("w7", "9780132350884", "isbn"))
+            .await;
+
+        assert!(result.is_ok(), "Transient Google Books error must not abort the pipeline");
+        let calls = repo.progress_calls.lock().unwrap();
+        let pcts: Vec<i32> = calls.iter().map(|(p, _)| *p).collect();
+        assert_eq!(pcts, vec![0, 25, 50, 75, 100]);
+    }
+
+    #[tokio::test]
+    async fn google_books_permanent_error_does_not_fail_pipeline() {
+        let mock = RoutingMock::new();
+        let gb = StubGoogleBooks::returns_permanent_error();
+        let (worker, repo) =
+            make_worker_with_google_books(mock, Some(gb as Arc<dyn GoogleBooksPort>));
+
+        let result = worker
+            .process(&payload("w8", "9780132350884", "isbn"))
+            .await;
+
+        assert!(result.is_ok(), "Permanent Google Books error must not abort the pipeline");
+        let calls = repo.progress_calls.lock().unwrap();
+        let pcts: Vec<i32> = calls.iter().map(|(p, _)| *p).collect();
+        assert_eq!(pcts, vec![0, 25, 50, 75, 100]);
     }
 
     #[test]
