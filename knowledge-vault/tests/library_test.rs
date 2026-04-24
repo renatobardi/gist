@@ -43,6 +43,7 @@ async fn make_test_server() -> TestServer {
         graph_read_repo: Arc::new(SurrealGraphReadRepo::new(db)),
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: None,
+        google_books_client: None,
         ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };

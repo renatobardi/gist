@@ -109,6 +109,7 @@ async fn make_test_server_with_nats() -> TestServer {
         graph_read_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: None,
+        google_books_client: None,
         ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
@@ -139,6 +140,7 @@ async fn make_test_server_no_nats() -> TestServer {
         graph_read_repo,
         message_publisher: None,
         open_library_client: None,
+        google_books_client: None,
         ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
@@ -169,6 +171,7 @@ async fn make_test_server_with_mock_ol(ol_result: Option<OpenLibraryBook>) -> Te
         graph_read_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(MockOpenLibraryClient { result: ol_result })),
+        google_books_client: None,
         ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };
@@ -438,6 +441,7 @@ async fn post_works_open_library_error_returns_500() {
         graph_read_repo,
         message_publisher: Some(Arc::new(NoopPublisher)),
         open_library_client: Some(Arc::new(ErrorOpenLibraryClient)),
+        google_books_client: None,
         ws_broadcaster: WsBroadcaster::new(),
         jwt_secret: "test-secret".to_string(),
     };

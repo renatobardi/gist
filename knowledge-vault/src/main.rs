@@ -102,6 +102,8 @@ async fn main() -> anyhow::Result<()> {
             }
         };
 
+    let ws_broadcaster = WsBroadcaster::new();
+
     // Start NATS worker if Gemini API key is set
     let gemini_api_key = std::env::var("KV_GEMINI_API_KEY").ok();
     match gemini_api_key {
@@ -158,6 +160,7 @@ async fn main() -> anyhow::Result<()> {
                             graph_write_repo.clone(),
                             openlib,
                             gemini,
+                            ws_broadcaster.clone(),
                         ));
 
                         info!("Starting NATS worker");
@@ -168,7 +171,6 @@ async fn main() -> anyhow::Result<()> {
         },
     }
 
-    let ws_broadcaster = WsBroadcaster::new();
     let state = AppState {
         db: Arc::new(db),
         user_repo,
@@ -181,6 +183,7 @@ async fn main() -> anyhow::Result<()> {
         graph_read_repo,
         message_publisher,
         open_library_client,
+        google_books_client: None,
         ws_broadcaster,
         jwt_secret,
     };
