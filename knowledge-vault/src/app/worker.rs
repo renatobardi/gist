@@ -215,11 +215,7 @@ mod tests {
         async fn update_progress(&self, _: &str, _: i32, _: &str) -> Result<(), RepoError> {
             Ok(())
         }
-        async fn update_reading_status(
-            &self,
-            _: &str,
-            _: Option<&str>,
-        ) -> Result<Work, RepoError> {
+        async fn update_reading_status(&self, _: &str, _: Option<&str>) -> Result<Work, RepoError> {
             unimplemented!()
         }
         async fn list_works_filtered(

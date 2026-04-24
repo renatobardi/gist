@@ -26,13 +26,8 @@ struct UserRecord {
 }
 
 fn record_to_user(rec: UserRecord) -> User {
-    let id = rec
-        .id
-        .map(|t| thing_id_to_string(t.id))
-        .unwrap_or_default();
-    let preferences = rec
-        .preferences
-        .and_then(|v| serde_json::from_value(v).ok());
+    let id = rec.id.map(|t| thing_id_to_string(t.id)).unwrap_or_default();
+    let preferences = rec.preferences.and_then(|v| serde_json::from_value(v).ok());
     User {
         id,
         email: rec.email,

@@ -58,8 +58,6 @@ pub struct GoogleBooksMetadata {
 
 #[async_trait]
 pub trait GoogleBooksPort: Send + Sync {
-    async fn fetch_by_isbn(
-        &self,
-        isbn: &str,
-    ) -> Result<Option<GoogleBooksMetadata>, ExternalError>;
+    async fn fetch_by_isbn(&self, isbn: &str)
+        -> Result<Option<GoogleBooksMetadata>, ExternalError>;
 }
