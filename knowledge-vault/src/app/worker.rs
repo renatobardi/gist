@@ -56,6 +56,7 @@ pub struct WorkerService {
     graph_write_repo: Arc<dyn GraphWriteRepo>,
     openlib: Arc<dyn OpenLibraryPort>,
     gemini: Arc<dyn GeminiPort>,
+    #[allow(dead_code)]
     ws_broadcaster: Arc<WsBroadcaster>,
 }
 
