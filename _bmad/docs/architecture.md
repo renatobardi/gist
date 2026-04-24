@@ -259,19 +259,27 @@ Oracle Cloud ARM64 VM
 ### Core Entities and Relationships
 
 ```
-┌─────────────────┐         ┌──────────────────┐         ┌───────────────────┐
-│      work        │         │     insight       │         │     concept        │
-├─────────────────┤         ├──────────────────┤         ├───────────────────┤
-│ id              │         │ id               │         │ id                │
-│ title           │         │ summary          │         │ name (normalized) │
-│ author          │         │ key_points[]     │         │ display_name      │
-│ isbn            │         │ raw_gemini_json  │         │ description       │
-│ open_library_id │         │ created_at       │         │ domain            │
-│ status          │         └──────────────────┘         │ created_at        │
-│ error_msg       │                                       └───────────────────┘
-│ created_at      │
-│ updated_at      │
-└─────────────────┘
+┌─────────────────────────────┐         ┌──────────────────┐         ┌───────────────────┐
+│          work                │         │     insight       │         │     concept        │
+├─────────────────────────────┤         ├──────────────────┤         ├───────────────────┤
+│ id                          │         │ id               │         │ id                │
+│ title                       │         │ summary          │         │ name (normalized) │
+│ author                      │         │ key_points[]     │         │ display_name      │
+│ isbn                        │         │ raw_gemini_json  │         │ description       │
+│ open_library_id             │         │ created_at       │         │ domain            │
+│ status                      │         └──────────────────┘         │ created_at        │
+│ error_msg                   │                                       └───────────────────┘
+│ created_at                  │
+│ updated_at                  │
+│ progress_pct                │
+│ last_action                 │
+│ reading_status              │
+│ cover_image_url             │
+│ page_count                  │
+│ publisher                   │
+│ average_rating              │
+│ preview_link                │
+└─────────────────────────────┘
 
 Edges (SurrealDB graph relations):
   work    --[interpreta]-->  insight   (1:1 per work after processing)
@@ -298,6 +306,14 @@ erDiagram
         string error_msg
         datetime created_at
         datetime updated_at
+        float progress_pct
+        datetime last_action
+        string reading_status
+        string cover_image_url
+        int page_count
+        string publisher
+        float average_rating
+        string preview_link
     }
     insight {
         string id PK
@@ -320,6 +336,8 @@ erDiagram
         string password_hash
         string role
         datetime created_at
+        string display_name
+        object preferences
     }
     personal_access_tokens {
         string id PK
@@ -352,6 +370,8 @@ DEFINE FIELD IF NOT EXISTS email       ON users TYPE string ASSERT string::is::e
 DEFINE FIELD IF NOT EXISTS password_hash ON users TYPE string;
 DEFINE FIELD IF NOT EXISTS role        ON users TYPE string DEFAULT 'admin';
 DEFINE FIELD IF NOT EXISTS created_at  ON users TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS display_name ON users TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS preferences ON users TYPE option<object>;
 DEFINE INDEX IF NOT EXISTS users_email ON users COLUMNS email UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS personal_access_tokens SCHEMAFULL;
@@ -380,8 +400,17 @@ DEFINE FIELD IF NOT EXISTS status          ON work TYPE string; -- pending|proce
 DEFINE FIELD IF NOT EXISTS error_msg       ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at      ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS updated_at      ON work TYPE datetime DEFAULT time::now();
-DEFINE INDEX IF NOT EXISTS work_isbn    ON work COLUMNS isbn UNIQUE;
-DEFINE INDEX IF NOT EXISTS work_ol_id   ON work COLUMNS open_library_id UNIQUE;
+DEFINE FIELD IF NOT EXISTS progress_pct    ON work TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS last_action     ON work TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS reading_status  ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS cover_image_url ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS page_count      ON work TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS publisher       ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS average_rating  ON work TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS preview_link    ON work TYPE option<string>;
+DEFINE INDEX IF NOT EXISTS work_isbn       ON work COLUMNS isbn UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_ol_id      ON work COLUMNS open_library_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS work_created_at ON work COLUMNS created_at;
 
 DEFINE TABLE IF NOT EXISTS insight SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS id                  ON insight TYPE string;
