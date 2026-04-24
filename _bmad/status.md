@@ -15,8 +15,8 @@
 | Phase | Agent | Status | Date |
 |-------|-------|--------|------|
 | Analysis | Analyst | ✅ Complete | 2026-04-24 |
-| PM | PM | 🔄 Awaiting owner input | — |
-| Architecture | Architect | ⏳ Not started | — |
+| PM | PM | ✅ Complete | 2026-04-24 |
+| Architecture | Architect | ✅ Complete | 2026-04-24 |
 | Development | Dev | ⏳ Not started | — |
 
 ## MVP 2 — Analysis Phase Deliverables
