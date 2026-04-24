@@ -1,8 +1,20 @@
 use crate::domain::concept::{ConceptDetail, GraphData};
 use crate::domain::insight::{ExtractedConcept, GeminiResponse, InsightDetail};
-use crate::domain::user::{PersonalAccessToken, User};
+use crate::domain::user::{PersonalAccessToken, User, UserPreferences};
 use crate::domain::work::Work;
-use serde_json::Value as JsonValue;
+
+#[derive(Debug, Clone, Copy)]
+pub enum WorkSortField {
+    Title,
+    CreatedAt,
+    ProgressPct,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
 
 #[derive(Debug)]
 pub enum RepoError {
@@ -31,7 +43,7 @@ pub trait UserRepo: Send + Sync {
         &self,
         id: &str,
         display_name: Option<String>,
-        preferences: Option<JsonValue>,
+        preferences: Option<UserPreferences>,
     ) -> Result<User, RepoError>;
 }
 
@@ -91,8 +103,8 @@ pub trait WorkRepo: Send + Sync {
         &self,
         status: Option<&str>,
         domain: Option<&str>,
-        sort: &str,
-        order: &str,
+        sort: WorkSortField,
+        order: SortOrder,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<Work>, RepoError>;

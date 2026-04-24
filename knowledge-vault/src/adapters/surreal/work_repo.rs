@@ -12,7 +12,7 @@ fn thing_id_to_string(id: surrealdb::sql::Id) -> String {
 
 use crate::{
     domain::work::Work,
-    ports::repository::{RepoError, WorkRepo},
+    ports::repository::{RepoError, SortOrder, WorkRepo, WorkSortField},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -299,8 +299,8 @@ impl WorkRepo for SurrealWorkRepo {
         &self,
         _status: Option<&str>,
         _domain: Option<&str>,
-        _sort: &str,
-        _order: &str,
+        _sort: WorkSortField,
+        _order: SortOrder,
         _limit: u32,
         _offset: u32,
     ) -> Result<Vec<Work>, RepoError> {

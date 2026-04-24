@@ -4,7 +4,7 @@ use surrealdb::{engine::local::Db, Surreal};
 use uuid::Uuid;
 
 use crate::{
-    domain::user::User,
+    domain::user::{User, UserPreferences},
     ports::repository::{RepoError, UserRepo},
 };
 
@@ -30,13 +30,16 @@ fn record_to_user(rec: UserRecord) -> User {
         .id
         .map(|t| thing_id_to_string(t.id))
         .unwrap_or_default();
+    let preferences = rec
+        .preferences
+        .and_then(|v| serde_json::from_value(v).ok());
     User {
         id,
         email: rec.email,
         password_hash: rec.password_hash,
         role: rec.role,
         display_name: rec.display_name,
-        preferences: rec.preferences,
+        preferences,
     }
 }
 
@@ -98,16 +101,11 @@ impl UserRepo for SurrealUserRepo {
                 }
             })?;
 
-        let rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
-
-        Ok(User {
-            id: user_id,
-            email: rec.email,
-            password_hash: rec.password_hash,
-            role: rec.role,
-            display_name: rec.display_name,
-            preferences: rec.preferences,
-        })
+        let mut rec = created.ok_or_else(|| RepoError::Internal("no record returned".into()))?;
+        rec.id = None;
+        let mut user = record_to_user(rec);
+        user.id = user_id;
+        Ok(user)
     }
 
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
@@ -134,7 +132,7 @@ impl UserRepo for SurrealUserRepo {
         &self,
         _id: &str,
         _display_name: Option<String>,
-        _preferences: Option<serde_json::Value>,
+        _preferences: Option<UserPreferences>,
     ) -> Result<User, RepoError> {
         todo!("implement update_profile")
     }

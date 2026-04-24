@@ -163,7 +163,7 @@ mod tests {
     use crate::ports::{
         external::{BookMetadata, ExternalError, GeminiPort, OpenLibraryBook, OpenLibraryPort},
         messaging::{backoff_delay, should_retry, WorkerError, MAX_ATTEMPTS},
-        repository::{GraphWriteRepo, RepoError, WorkRepo},
+        repository::{GraphWriteRepo, RepoError, SortOrder, WorkRepo, WorkSortField},
     };
     use std::sync::Mutex;
     use std::time::Duration;
@@ -226,8 +226,8 @@ mod tests {
             &self,
             _: Option<&str>,
             _: Option<&str>,
-            _: &str,
-            _: &str,
+            _: WorkSortField,
+            _: SortOrder,
             _: u32,
             _: u32,
         ) -> Result<Vec<Work>, RepoError> {

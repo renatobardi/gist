@@ -19,7 +19,7 @@ pub struct User {
     pub password_hash: String,
     pub role: String,
     pub display_name: Option<String>,
-    pub preferences: Option<serde_json::Value>,
+    pub preferences: Option<UserPreferences>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
