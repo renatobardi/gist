@@ -104,7 +104,7 @@ async fn get_failed_works_contains_key_elements() {
         .add_header("Authorization", format!("Bearer {jwt}"))
         .await;
     let body = res.text();
-    assert!(body.contains("Failed Works"), "missing page title");
+    assert!(body.contains("Processos com Falha"), "missing page title");
     assert!(body.contains("/api/works"), "missing works API reference");
     assert!(
         body.contains("retry"),
