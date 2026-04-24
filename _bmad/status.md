@@ -8,8 +8,22 @@
 | UX Design | UX Designer | ✅ Complete | 2026-04-20 |
 | Development | Dev | ⏳ Not started | — |
 
+---
+
+## MVP 2 Pipeline Status
+
+| Phase | Agent | Status | Date |
+|-------|-------|--------|------|
+| Analysis (MVP 2) | Analyst | ✅ Complete | 2026-04-23 |
+| PM (MVP 2) | PM | ⏳ Pending | — |
+| Architecture (MVP 2) | Architect | ⏳ Pending | — |
+| Development (MVP 2) | Dev | ⏳ Pending | — |
+
 ## Analysis Phase Deliverables
 - `_bmad/docs/product-brief.md` — Product Brief + Initial System Design (SurrealQL schema, Rust Traits, NATS strategy)
+
+## MVP 2 Analysis Phase Deliverables
+- `_bmad/docs/product-brief-mvp2.md` — MVP 2 Product Brief (profile, processing status, delete, sort/filter/AI grouping, multi-source metadata, Amazon links)
 
 ## PM Phase Deliverables
 - `_bmad/docs/prd.md` — Full PRD: 24 FRs, 16 NFRs, 8 epics, 21 user stories
