@@ -166,13 +166,17 @@ SurrealDB persists graph
     └── Updates concept connections
 ```
 
-### 4️⃣ Notification Phase
+### 4️⃣ Progress Tracking & Notification Phase
 ```
-Worker completion event
+Worker emits progress at 5 checkpoints (0%, 25%, 50%, 75%, 100%)
     ↓
-Frontend receives via WebSocket/Signal
+Progress persisted to work record (progress_pct, last_action)
     ↓
-UI reflects Work as processed & graph updated
+Frontend receives via WebSocket in real-time
+    ↓
+UI updates progress bar, action description, metadata (cover, pages, rating)
+    ↓
+Final completion event triggers: status = "done", insight + concepts available
 ```
 
 ## 🏛️ Hexagonal Architecture
@@ -522,8 +526,9 @@ Revoked tokens are immediately rejected with 401 on subsequent requests.
 
 See [PAT API Reference](/_bmad/docs/api-pat.md) and [PAT User Guide](/_bmad/docs/pat-user-guide.md) for detailed documentation.
 
-### Works API
-- [Works API Reference](/_bmad/docs/api-works.md) - Documentation for submitting and managing works.
+### Works API & Processing
+- [Works API Reference](/_bmad/docs/api-works.md) - Documentation for submitting and managing works, monitoring progress
+- [Worker Pipeline Guide](/_bmad/docs/worker-pipeline.md) - Detailed guide on async processing pipeline, progress tracking, Google Books integration, and error handling
 
 ### Security Headers
 All responses include the following security headers:

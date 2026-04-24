@@ -28,6 +28,30 @@ All notable changes to Knowledge Vault will be documented in this file.
 - Updated schema documentation with new `work` and `users` table fields
 - Updated architecture data model section with extended entity definitions
 
+#### Worker Pipeline: Progress Tracking & Google Books Integration (2026-04-24)
+- **4-stage progress pipeline** with real-time progress tracking (S01-02):
+  - Stage 0 (0%): Fetch metadata from Open Library
+  - Stage 1 (25%): Enrich with Google Books (optional, non-fatal)
+  - Stage 2 (50%): Extract concepts with Gemini API
+  - Stage 3 (75%): Write results to knowledge graph
+  - Stage 4 (100%): Complete
+- **Progress persistence** to work record: `progress_pct` and `last_action` fields updated at each checkpoint
+- **WebSocket broadcasts** for real-time progress updates: clients receive `{"type": "work_progress", "work_id": "...", "progress_pct": N, "last_action": "..."}` messages
+- **Google Books adapter integration** for ISBN-based submissions:
+  - Conditional execution: only runs for ISBN submissions when `KV_GOOGLE_BOOKS_API_KEY` is set
+  - Non-fatal error handling: transient and permanent errors in Google Books do not fail the pipeline
+  - Metadata enrichment: persists `cover_image_url`, `page_count`, `publisher`, `average_rating`, `preview_link`
+  - Fallback handling: Open Library covers API provides fallback cover URLs when Google Books returns no image
+- **Error classification** refined: transient errors (timeouts, rate limits) retry with exponential backoff; permanent errors (invalid ISBN, schema violations) fail immediately
+- **Monitoring via REST**: clients can poll `GET /api/works/{id}` to retrieve current `progress_pct` and `last_action`
+- Full test coverage for progress emission, Google Books error scenarios, and WebSocket broadcasts
+- PR: [https://github.com/renatobardi/gist/pull/TBD](https://github.com/renatobardi/gist/pull/TBD)
+
+### Documentation
+- Added comprehensive [Worker Pipeline Guide](_bmad/docs/worker-pipeline.md) with architecture, progress tracking, Google Books integration, error handling, and development guide
+- Updated [Works API documentation](_bmad/docs/api-works.md) with progress monitoring sections (WebSocket events and REST polling)
+- Updated [README.md](_bmad/docs/) with links to worker pipeline documentation
+
 #### Health Check Endpoint (2026-04-21)
 - `GET /health` endpoint for service and database connectivity monitoring
 - HTTP 200 with `{status: "ok", version: "...", db: "connected"}` when database is reachable
