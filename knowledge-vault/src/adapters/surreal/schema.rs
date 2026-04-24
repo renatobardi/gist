@@ -4,6 +4,8 @@ DEFINE FIELD IF NOT EXISTS email        ON users TYPE string ASSERT string::is::
 DEFINE FIELD IF NOT EXISTS password_hash ON users TYPE string;
 DEFINE FIELD IF NOT EXISTS role         ON users TYPE string DEFAULT 'admin';
 DEFINE FIELD IF NOT EXISTS created_at   ON users TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS display_name ON users TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS preferences  ON users TYPE option<object>;
 DEFINE INDEX IF NOT EXISTS users_email  ON users COLUMNS email UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS login_attempts SCHEMAFULL;
@@ -29,6 +31,14 @@ DEFINE FIELD IF NOT EXISTS status         ON work TYPE string DEFAULT 'pending';
 DEFINE FIELD IF NOT EXISTS error_msg      ON work TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at     ON work TYPE datetime DEFAULT time::now();
 DEFINE FIELD IF NOT EXISTS updated_at     ON work TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS reading_status  ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS progress_pct    ON work TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS last_action     ON work TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS cover_image_url ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS page_count      ON work TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS publisher       ON work TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS average_rating  ON work TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS preview_link    ON work TYPE option<string>;
 DEFINE INDEX IF NOT EXISTS work_isbn       ON work COLUMNS isbn UNIQUE;
 DEFINE INDEX IF NOT EXISTS work_ol_id      ON work COLUMNS open_library_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS work_created_at ON work COLUMNS created_at;
