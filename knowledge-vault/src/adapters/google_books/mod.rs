@@ -56,7 +56,10 @@ struct ImageLinks {
 
 #[async_trait]
 impl GoogleBooksPort for GoogleBooksClient {
-    async fn fetch_by_isbn(&self, isbn: &str) -> Result<Option<GoogleBooksMetadata>, ExternalError> {
+    async fn fetch_by_isbn(
+        &self,
+        isbn: &str,
+    ) -> Result<Option<GoogleBooksMetadata>, ExternalError> {
         let api_key = match &self.api_key {
             Some(k) => k,
             None => {
@@ -106,7 +109,12 @@ impl GoogleBooksPort for GoogleBooksClient {
         let cover_image_url = volume_info
             .image_links
             .as_ref()
-            .and_then(|links| links.thumbnail.clone().or_else(|| links.small_thumbnail.clone()))
+            .and_then(|links| {
+                links
+                    .thumbnail
+                    .clone()
+                    .or_else(|| links.small_thumbnail.clone())
+            })
             .or_else(|| {
                 // Fallback to Open Library Covers API
                 Some(format!(
