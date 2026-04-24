@@ -280,11 +280,44 @@ impl WorkRepo for SurrealWorkRepo {
 
     async fn update_progress(
         &self,
-        _id: &str,
-        _progress_pct: i32,
-        _last_action: &str,
+        id: &str,
+        progress_pct: i32,
+        last_action: &str,
     ) -> Result<(), RepoError> {
-        todo!("implement update_progress")
+        self.db
+            .query(
+                "UPDATE type::thing('work', $id) SET progress_pct = $pct, last_action = $action, updated_at = time::now()",
+            )
+            .bind(("id", id.to_string()))
+            .bind(("pct", progress_pct))
+            .bind(("action", last_action.to_string()))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn update_google_books_metadata(
+        &self,
+        id: &str,
+        cover_image_url: Option<&str>,
+        page_count: Option<i32>,
+        publisher: Option<&str>,
+        average_rating: Option<f64>,
+        preview_link: Option<&str>,
+    ) -> Result<(), RepoError> {
+        self.db
+            .query(
+                "UPDATE type::thing('work', $id) SET cover_image_url = $cover, page_count = $page_count, publisher = $publisher, average_rating = $rating, preview_link = $preview, updated_at = time::now()",
+            )
+            .bind(("id", id.to_string()))
+            .bind(("cover", cover_image_url.map(|s| s.to_string())))
+            .bind(("page_count", page_count))
+            .bind(("publisher", publisher.map(|s| s.to_string())))
+            .bind(("rating", average_rating))
+            .bind(("preview", preview_link.map(|s| s.to_string())))
+            .await
+            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        Ok(())
     }
 
     async fn update_reading_status(
