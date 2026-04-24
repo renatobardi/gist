@@ -5,12 +5,21 @@ use email_address::EmailAddress;
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UserPreferences {
+    pub theme: Option<String>,
+    pub default_sort: Option<String>,
+    pub default_sort_order: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct User {
     pub id: String,
     pub email: String,
     pub password_hash: String,
     pub role: String,
+    pub display_name: Option<String>,
+    pub preferences: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

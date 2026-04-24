@@ -46,3 +46,20 @@ pub trait GeminiPort: Send + Sync {
         metadata: &BookMetadata,
     ) -> Result<GeminiResponse, ExternalError>;
 }
+
+#[derive(Debug, Clone)]
+pub struct GoogleBooksMetadata {
+    pub cover_image_url: Option<String>,
+    pub page_count: Option<i32>,
+    pub publisher: Option<String>,
+    pub average_rating: Option<f64>,
+    pub preview_link: Option<String>,
+}
+
+#[async_trait]
+pub trait GoogleBooksPort: Send + Sync {
+    async fn fetch_by_isbn(
+        &self,
+        isbn: &str,
+    ) -> Result<Option<GoogleBooksMetadata>, ExternalError>;
+}

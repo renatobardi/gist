@@ -11,6 +11,14 @@ pub struct Work {
     pub error_msg: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub progress_pct: i32,
+    pub last_action: String,
+    pub reading_status: Option<String>,
+    pub cover_image_url: Option<String>,
+    pub page_count: Option<i32>,
+    pub publisher: Option<String>,
+    pub average_rating: Option<f64>,
+    pub preview_link: Option<String>,
 }
 
 #[derive(Debug)]
