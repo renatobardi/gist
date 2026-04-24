@@ -21,13 +21,12 @@ All notable changes to Knowledge Vault will be documented in this file.
   - `preferences` (option<object>): Unstructured user preferences (extensible for future use)
 - All fields are optional and added via safe, idempotent `DEFINE FIELD IF NOT EXISTS` syntax
 - No data migration required; existing records remain unchanged with null values for new fields
+- Added `work_created_at` index on `work.created_at` for query performance
 - PR: [https://github.com/renatobardi/gist/pull/52](https://github.com/renatobardi/gist/pull/52)
 
 ### Documentation
 - Updated schema documentation with new `work` and `users` table fields
 - Updated architecture data model section with extended entity definitions
-
-### Added
 
 #### Health Check Endpoint (2026-04-21)
 - `GET /health` endpoint for service and database connectivity monitoring

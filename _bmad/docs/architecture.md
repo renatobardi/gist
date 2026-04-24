@@ -287,7 +287,7 @@ Edges (SurrealDB graph relations):
   concept --[relacionado_a]--> concept (many:many, relation_type + strength on edge)
 
 Auth tables (relational, not graph):
-  users: id, email, password_hash, role, created_at
+  users: id, email, password_hash, role, created_at, display_name, preferences
   personal_access_tokens: id, user_id, name, token_hash, created_at, revoked_at
   login_attempts: id, email, attempted_at, succeeded
 ```
