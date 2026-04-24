@@ -2,6 +2,22 @@
 
 This section details the API endpoints for managing "works" — primarily the ingestion of book references into the Knowledge Vault system.
 
+## Overview
+
+When a work (book) is submitted for processing:
+
+1. The system creates a work record with status `"pending"` and returns immediately (202 Accepted)
+2. An asynchronous worker processes the submission through a 4-stage pipeline with real-time progress tracking:
+   - **Stage 0 (0%):** Fetch metadata from Open Library
+   - **Stage 1 (25%):** Enrich with Google Books (optional, non-fatal)
+   - **Stage 2 (50%):** Extract concepts with Gemini API
+   - **Stage 3 (75%):** Write results to knowledge graph
+   - **Stage 4 (100%):** Complete
+3. Progress updates are persisted to the database (`progress_pct`, `last_action`) and broadcast via WebSocket in real-time
+4. Final status is `"done"` (success) or `"failed"` (error); the insight and concepts are available via `GET /api/works/{id}`
+
+See [Worker Pipeline documentation](./worker-pipeline.md) for detailed information on progress tracking, Google Books integration, and error handling.
+
 ## Ingest a Work by ISBN
 
 This endpoint allows for the submission of new book references using their ISBN (International Standard Book Number). The system will process the ISBN, fetch book metadata, and initiate the knowledge graph generation process. Duplicate ISBNs will be rejected.
@@ -80,6 +96,92 @@ Returned when:
 - Authorization header format is invalid
 - JWT is expired or invalid
 - PAT is revoked or invalid
+
+---
+
+## Monitoring Work Progress
+
+### Real-time Progress via WebSocket
+
+Once a work is submitted, you can receive real-time progress updates by connecting to the WebSocket endpoint:
+
+```
+GET /ws
+Authorization: Bearer <JWT or PAT>
+Upgrade: websocket
+```
+
+The server broadcasts progress messages as JSON:
+
+```json
+{
+  "type": "work_progress",
+  "work_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "progress_pct": 50,
+  "last_action": "Extracting concepts with Gemini"
+}
+```
+
+**Event Types:**
+- `"type": "work_progress"` — Progress checkpoint (emitted at 0%, 25%, 50%, 75%, 100%)
+- `"type": "work_status"` — Status change (emitted when status becomes "processing", "done", or "failed")
+
+**Example Status Event:**
+```json
+{
+  "type": "work_status",
+  "work_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "status": "done"
+}
+```
+
+### Polling Progress via REST
+
+Query the work details to get the current progress state:
+
+```
+GET /api/works/{work_id}
+Authorization: Bearer <JWT or PAT>
+```
+
+Response includes:
+```json
+{
+  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "title": "The Pragmatic Programmer",
+  "author": "David Thomas, Andrew Hunt",
+  "isbn": "978-0201616224",
+  "status": "processing",
+  "progress_pct": 50,
+  "last_action": "Extracting concepts with Gemini",
+  "created_at": "2026-04-24T12:00:00Z",
+  "updated_at": "2026-04-24T12:00:30Z",
+  "cover_image_url": "https://covers.openlibrary.org/b/id/7778352-M.jpg",
+  "page_count": 352,
+  "publisher": "Addison-Wesley Professional",
+  "average_rating": 4.5,
+  "preview_link": "https://books.google.com/books?id=..."
+}
+```
+
+**Progress Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `progress_pct` | number (0-100) | Current pipeline progress as percentage: 0% = starting, 25% = Open Library fetch complete, 50% = Google Books complete, 75% = Gemini extraction complete, 100% = pipeline complete |
+| `last_action` | string | Description of the current stage (e.g., "Fetching metadata from Open Library") |
+
+**Metadata Fields** (populated by Google Books during Stage 1):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cover_image_url` | string \| null | URL to the book cover image (from Google Books, with Open Library fallback) |
+| `page_count` | integer \| null | Total number of pages in the book |
+| `publisher` | string \| null | Publishing company name |
+| `average_rating` | number \| null | Community rating (0–5 scale) |
+| `preview_link` | string \| null | URL to preview content (typically Google Books preview) |
+
+**Note:** If a work fails during processing, `status` will be `"failed"` and `error_msg` will contain the error description.
 
 ---
 
